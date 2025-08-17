@@ -5,47 +5,30 @@ from .diffusion import diffuse_masked
 
 
 def update_visit_trail(V: np.ndarray, y: int, x: int, walls_mask: np.ndarray,
-                       v_decay: float = 0.012, v_diff: float = 0.10, v_inj: float = 1.0) -> np.ndarray:
+                       v_decay: float = 0.012, v_diff: float = 0.08, v_inj: float = 1.0,
+                       v_cap: float = 3.0) -> np.ndarray:
     """
-    Update visit trail field with agent's current position.
-    
-    Args:
-        V: Visit trail field
-        y, x: Agent position
-        walls_mask: Boolean mask of walls
-        v_decay: Trail decay rate
-        v_diff: Trail diffusion coefficient
-        v_inj: Trail injection strength
-        
-    Returns:
-        Updated visit trail field
+    Additive deposit with cap; slightly lower diffusion to keep repulsion local.
     """
     V = V.astype(np.float32, copy=True)
+    # First inject at current position (before decay)
+    V[y, x] = np.minimum(V[y, x] + v_inj, v_cap)  # <-- additive, capped
+    # Then apply decay (so current position doesn't immediately decay)
     V *= (1.0 - v_decay)
-    V[y, x] = max(V[y, x], v_inj)
-    V = diffuse_masked(V, walls_mask, diff=v_diff, decay=0.004, steps=1)
+    # Diffuse to spread the trail
+    V = diffuse_masked(V, walls_mask, diff=v_diff, decay=0.002, steps=1)
     return V
 
 
 def update_novelty(N: np.ndarray, pred_err_scalar: float, y: int, x: int, walls_mask: np.ndarray,
-                   n_decay: float = 0.02, n_diff: float = 0.06) -> np.ndarray:
+                   n_decay: float = 0.02, n_diff: float = 0.06, gain: float = 6.0) -> np.ndarray:
     """
-    Update novelty field based on prediction error.
-    
-    Args:
-        N: Novelty field
-        pred_err_scalar: Prediction error magnitude
-        y, x: Agent position
-        walls_mask: Boolean mask of walls
-        n_decay: Novelty decay rate
-        n_diff: Novelty diffusion coefficient
-        
-    Returns:
-        Updated novelty field
+    Stronger novelty deposit (gain) with clamping to [0,1].
     """
     N = N.astype(np.float32, copy=True)
     N *= (1.0 - n_decay)
-    N[y, x] = max(N[y, x], float(pred_err_scalar))
+    inj = float(gain * pred_err_scalar)
+    N[y, x] = min(1.0, max(N[y, x], inj))
     N = diffuse_masked(N, walls_mask, diff=n_diff, decay=0.004, steps=1)
     return N
 
@@ -69,6 +52,33 @@ def corner_hazard(walls_mask: np.ndarray) -> np.ndarray:
     return (nn >= 2).astype(np.float32)
 
 
+def wall_proximity_field(walls_mask: np.ndarray, radius: float = 1.0) -> np.ndarray:
+    """
+    Create a repulsive field near walls to prevent wall-hugging.
+    
+    Args:
+        walls_mask: Boolean mask of walls  
+        radius: How far the repulsion extends from walls
+        
+    Returns:
+        Wall proximity penalty field (higher values near walls)
+    """
+    from .diffusion import diffuse_masked
+    
+    # Start with walls as source
+    W = walls_mask.astype(np.float32)
+    
+    # Diffuse wall presence to create proximity gradient
+    # More steps = wider repulsion zone
+    steps = max(1, int(radius * 2))
+    W_prox = diffuse_masked(W, walls_mask, diff=0.25, decay=0.05, steps=steps)
+    
+    # Scale so it's strong near walls but drops off
+    W_prox = np.clip(W_prox * 2.0, 0, 1.0)
+    
+    return W_prox
+
+
 def effective_potential(GA, GB, N, Vtrail, Hc,
                         wA=1.0, wB=0.9, wN=0.5, kV=0.7, kH=0.55):
     """
@@ -89,39 +99,44 @@ def effective_potential(GA, GB, N, Vtrail, Hc,
     return (wA * GA + wB * GB + wN * N) - (kV * Vtrail + kH * Hc)
 
 
-def pick_action_from_potential(P: np.ndarray, y: int, x: int, walls_mask: np.ndarray,
-                               temperature: float = 0.0) -> int:
+def pick_action_from_potential(
+    P: np.ndarray, y: int, x: int, walls_mask: np.ndarray,
+    temperature: float = 0.0,
+    last_action: int | None = None,
+    no_backtrack: bool = False,
+    momentum: float = 0.0
+) -> int:
     """
-    Select action based on potential field gradient.
-    
-    Args:
-        P: Potential field
-        y, x: Current position
-        walls_mask: Boolean mask of walls
-        temperature: Softmax temperature (0 = greedy)
-        
-    Returns:
-        Action index (0=up, 1=down, 2=left, 3=right)
+    Choose among 4-neighbors. If temperature>0, add Gumbel noise to scores.
+    Optional momentum toward last_action; optional no-backtrack when stuck.
     """
+    import numpy as np
+
     H, W = P.shape
     dirs = [(-1,0), (1,0), (0,-1), (0,1)]
     scores = []
-    
+
     for dy, dx in dirs:
         yy, xx = y + dy, x + dx
         if (yy < 0) or (yy >= H) or (xx < 0) or (xx >= W) or walls_mask[yy, xx]:
             scores.append(-1e9)
         else:
             scores.append(P[yy, xx])
-            
+
+    s = np.array(scores, dtype=np.float32)
+
+    # Momentum: prefer continuing the previous action a bit
+    if (momentum > 0.0) and (last_action is not None) and (0 <= last_action < 4):
+        s[last_action] += float(momentum)
+
+    # No immediate reverse (helps break ping-pong) when stuck
+    if no_backtrack and (last_action is not None):
+        reverse = [1, 0, 3, 2][last_action]
+        s[reverse] -= 1e3  # hard-penalize exact backstep
+
     if temperature and temperature > 0:
-        s = np.array(scores, dtype=np.float32)
-        s -= s.max()
-        p = np.exp(s / temperature)
-        sm = p.sum()
-        if sm <= 0:
-            return int(np.argmax(scores))
-        p /= sm
-        return int(np.random.choice(4, p=p))
+        # Gumbel-max sampling (local noise in the action space, not the map)
+        g = np.random.gumbel(loc=0.0, scale=float(temperature), size=4).astype(np.float32)
+        return int(np.argmax(s + g))
     else:
-        return int(np.argmax(scores))
+        return int(np.argmax(s))

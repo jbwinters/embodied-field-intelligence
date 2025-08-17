@@ -9,7 +9,7 @@ from ..configs import Ablations, EnvConfig, AgentConfig, SchemaConfig
 from ..envs import ForageWorld
 from ..agents import ChemotaxisAgentCA, SchemaField, build_features_for_schema
 from ..core import (
-    corner_hazard, 
+    corner_hazard,
     effective_potential, 
     pick_action_from_potential,
     set_global_seed
@@ -42,9 +42,19 @@ def run_episode(
         Vtrail = fields["Vtrail"] if ablate.trail else np.zeros_like(GA)
         Novel  = fields["Novel"]  if ablate.novelty else np.zeros_like(GA)
 
-        # Base potential
+        # Blend frontier with decay based on local trail strength
+        # High trail at current position means we've been here too much
+        U = fields.get("Frontier", np.zeros_like(GA))
+        if ablate.novelty:
+            # Reduce frontier influence when trail is high (we're oscillating)
+            trail_here = Vtrail[env.y, env.x]
+            frontier_weight = max(0.0, 0.25 * (1.0 - trail_here / 3.0))
+            Novel = Novel + frontier_weight * U
+        
+        # Base potential with rebalanced weights
         P_eff = effective_potential(GA, GB, Novel, Vtrail, Hc,
-                                    wA=1.0, wB=0.9, wN=0.5, kV=0.7, kH=0.55)
+                                    wA=1.0, wB=0.9, wN=0.7,  # strong novelty for exploration
+                                    kV=0.6, kH=0.5)          # moderate repulsion
 
         # Schema bias (learned, slow)
         Ssum = np.zeros_like(P_eff)
@@ -54,18 +64,33 @@ def run_episode(
             Ssum = np.sum(schema.Smaps, axis=0).astype(np.float32)
             P_eff = P_eff + schema.bias_field()
 
-        # Exploration noise (wander) to break ties / leave corners
-        if getattr(agent.cfg, "wander", 0.0) > 0.0:
-            P_eff = P_eff + agent.cfg.wander * agent.rng.randn(*P_eff.shape).astype(np.float32)
-
-        # Anti-stuck temperature based on last *actual* move (updated after step)
-        temp = agent.cfg.anti_stuck_temp if agent.stuck_count >= agent.cfg.anti_stuck_after else 0.0
-        a = pick_action_from_potential(P_eff, env.y, env.x, walls_mask, temperature=temp)
+        # Use trail strength as natural "stuck" signal
+        # High trail means we've been here too much
+        trail_here = Vtrail[env.y, env.x]
+        if trail_here > 2.0:  # We're oscillating/stuck
+            # Temperature based on how stuck we are
+            temp = 0.5 + (trail_here - 2.0) * 0.5
+            temp = min(temp, 2.0)  # Cap at 2.0
+            no_backtrack = True
+            momentum = 0.0
+        else:
+            temp = 0.0
+            no_backtrack = False
+            momentum = 0.05
+        
+        a = pick_action_from_potential(
+            P_eff, env.y, env.x, walls_mask,
+            temperature=temp,
+            last_action=getattr(agent, "last_action", None),
+            no_backtrack=no_backtrack,
+            momentum=momentum
+        )
 
         # Step env
         obs, r, done, info = env.step(a)
         ep_ret += r
         steps += 1
+        agent.last_action = a  # Store for momentum/no-backtrack
 
         # Update stuck counter from the truth on the ground
         if not info.get("moved", False):

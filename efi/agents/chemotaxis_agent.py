@@ -42,10 +42,23 @@ class ChemotaxisAgentCA:
         self.V  = np.zeros((self.H, self.W), dtype=np.float32)
         self.Nv = np.zeros((self.H, self.W), dtype=np.float32)
         self.known_walls = np.zeros((self.H, self.W), dtype=bool)
+        self.seen = np.zeros((self.H, self.W), dtype=bool)  # for frontier drive
+        # Mark initial visible area as seen
+        y, x = self.env.y, self.env.x
+        half = self.win // 2
+        for dy in range(-half, half+1):
+            for dx in range(-half, half+1):
+                gy, gx = y + dy, x + dx
+                if 0 <= gy < self.H and 0 <= gx < self.W:
+                    self.seen[gy, gx] = True
         self.prev_P_here = 0.0
         self.stuck_count = 0
         self.last_pos = (self.env.y, self.env.x)
+        self.last_action = None
         self._prev_patch = None  # for obs-change novelty
+        from collections import deque
+        self._pos_hist = deque(maxlen=3)
+        self._pos_hist.append((self.env.y, self.env.x))
 
     def _seed_from_patch(self, obs_vec: np.ndarray, y: int, x: int):
         """
@@ -80,6 +93,12 @@ class ChemotaxisAgentCA:
         Action is chosen externally from the runner based on fields.
         """
         y, x = self.env.y, self.env.x
+        
+        # Ping-pong detection
+        self._pos_hist.append((y, x))
+        pingpong = (len(self._pos_hist) == 3 and 
+                   self._pos_hist[0] == self._pos_hist[2] and 
+                   self._pos_hist[0] != self._pos_hist[1])
 
         # 1) Seed scents locally from patch
         ch = 4
@@ -94,6 +113,7 @@ class ChemotaxisAgentCA:
                 gy, gx = y + dy, x + dx
                 py, px = dy + half, dx + half
                 if 0 <= gy < self.H and 0 <= gx < self.W:
+                    self.seen[gy, gx] = True  # Mark as seen for frontier
                     if walls_local[py, px]:
                         self.known_walls[gy, gx] = True
                     if A_local[py, px]:
@@ -115,10 +135,15 @@ class ChemotaxisAgentCA:
             self.GA = diffuse_masked(self.GA, walls_mask, diff=self.cfg.scent_diff, decay=self.cfg.scent_decay, steps=1)
             self.GB = diffuse_masked(self.GB, walls_mask, diff=self.cfg.scent_diff, decay=self.cfg.scent_decay, steps=1)
 
-        # 3) Trail (repulsive)
+        # 3) Trail (repulsive) with boost for ping-ponging
         if self.ablate.trail:
+            # Stronger injection when ping-ponging
+            v_inj_eff = self.cfg.v_inj * (2.5 if pingpong else 1.0)
+                
             self.V = update_visit_trail(self.V, y, x, walls_mask,
-                                        v_decay=self.cfg.v_decay, v_diff=self.cfg.v_diff, v_inj=self.cfg.v_inj)
+                                        v_decay=self.cfg.v_decay,
+                                        v_diff=self.cfg.v_diff,
+                                        v_inj=v_inj_eff)
         else:
             self.V[:] = 0.0
 
@@ -136,9 +161,17 @@ class ChemotaxisAgentCA:
         pred_err = 0.5 * d_scent + 0.5 * d_obs
 
         if self.ablate.novelty:
-            self.Nv = update_novelty(self.Nv, pred_err, y, x, walls_mask, n_decay=0.018, n_diff=0.06)
+            self.Nv = update_novelty(self.Nv, pred_err, y, x, walls_mask, n_decay=0.018, n_diff=0.06, gain=6.0)
         else:
             self.Nv[:] = 0.0
+
+        # 5) Frontier field (unseen areas)
+        # Only consider frontiers that are reachable (not behind walls)
+        U = (~self.seen).astype(np.float32)   # 1 for unknown cells
+        # Mask out walls from frontier to prevent attraction through walls
+        U = U * (~walls_mask).astype(np.float32)
+        # Diffuse with stronger decay to keep frontier local
+        U = diffuse_masked(U, walls_mask, diff=0.15, decay=0.01, steps=3)
 
         # NOTE: we do NOT update stuck_count here; runner updates it *after* env.step()
 
@@ -147,6 +180,7 @@ class ChemotaxisAgentCA:
             "GB": self.GB.copy(),
             "Vtrail": self.V.copy(),
             "Novel": self.Nv.copy(),
+            "Frontier": U.copy(),
             "known_walls": self.known_walls.copy(),
         }
         return -1, fields

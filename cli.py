@@ -31,19 +31,19 @@ def add_common_args(parser):
     parser.add_argument("--max-steps", type=int, default=200, dest="max_steps", help="Max episode steps")
     parser.add_argument("--seed", type=int, default=0, help="Random seed")
     
-    # Agent
-    parser.add_argument("--seed-strength", type=float, default=0.6, dest="seed_strength")
-    parser.add_argument("--scent-diff", type=float, default=0.14, dest="scent_diff")
-    parser.add_argument("--scent-decay", type=float, default=0.01, dest="scent_decay")
-    parser.add_argument("--scent-steps", type=int, default=2, dest="scent_steps")
+    # Agent (updated defaults to match improved config)
+    parser.add_argument("--seed-strength", type=float, default=1.0, dest="seed_strength")
+    parser.add_argument("--scent-diff", type=float, default=0.25, dest="scent_diff")
+    parser.add_argument("--scent-decay", type=float, default=0.005, dest="scent_decay")
+    parser.add_argument("--scent-steps", type=int, default=4, dest="scent_steps")
     parser.add_argument("--v-inj", type=float, default=1.0, dest="v_inj")
-    parser.add_argument("--v-decay", type=float, default=0.03, dest="v_decay")
-    parser.add_argument("--v-diff", type=float, default=0.10, dest="v_diff")
+    parser.add_argument("--v-decay", type=float, default=0.02, dest="v_decay")
+    parser.add_argument("--v-diff", type=float, default=0.08, dest="v_diff")
     parser.add_argument("--k-repulse", type=float, default=0.30, dest="k_repulse")
-    parser.add_argument("--wander", type=float, default=0.08)
+    parser.add_argument("--wander", type=float, default=0.0)
     parser.add_argument("--stay-thresh", type=float, default=0.02, dest="stay_thresh")
-    parser.add_argument("--anti-stuck-after", type=int, default=3, dest="anti_stuck_after")
-    parser.add_argument("--anti-stuck-temp", type=float, default=0.6, dest="anti_stuck_temp")
+    parser.add_argument("--anti-stuck-after", type=int, default=2, dest="anti_stuck_after")
+    parser.add_argument("--anti-stuck-temp", type=float, default=0.8, dest="anti_stuck_temp")
     parser.add_argument("--internal-think", type=int, default=0, dest="internal_think")
     
     # Ablations
@@ -334,6 +334,12 @@ def build_parser():
     add_common_args(interactive_parser)
     interactive_parser.add_argument("--auto-play", action="store_true", help="Auto-play on start")
     
+    # ASCII debug mode
+    ascii_parser = subparsers.add_parser("ascii", help="Run episode with ASCII visualization")
+    add_common_args(ascii_parser)
+    ascii_parser.add_argument("--show-every", type=int, default=10, help="Show state every N steps")
+    ascii_parser.add_argument("--show-fields", action="store_true", help="Show field values")
+    
     return parser
 
 
@@ -426,6 +432,160 @@ def run_interactive(args):
         print("[interactive] No episode data recorded.")
 
 
+def run_ascii(args):
+    """Run ASCII debug mode."""
+    set_global_seed(args.seed)
+    
+    # Create configs
+    env_cfg = EnvConfig(
+        H=args.H, W=args.W, win=args.win, p_wall=args.p_wall,
+        n_targets_A=args.nA, n_targets_B=args.nB,
+        max_steps=args.max_steps, seed=args.seed
+    )
+    
+    agent_cfg = AgentConfig(
+        seed_strength=args.seed_strength, scent_diff=args.scent_diff,
+        scent_decay=args.scent_decay, scent_steps=args.scent_steps,
+        v_inj=args.v_inj, v_decay=args.v_decay, v_diff=args.v_diff,
+        k_repulse=args.k_repulse, wander=args.wander, stay_thresh=args.stay_thresh,
+        anti_stuck_after=args.anti_stuck_after, anti_stuck_temp=args.anti_stuck_temp,
+        internal_think=args.internal_think, seed=args.seed
+    )
+    
+    ablate = Ablations(
+        trail=args.trail, novelty=args.novelty, 
+        corner=args.corner, schema=args.schema
+    )
+    
+    # Create environment and agent
+    env = ForageWorld(env_cfg)
+    agent = ChemotaxisAgentCA(env, agent_cfg, ablate)
+    
+    # Run with ASCII visualization
+    from efi.core import effective_potential, pick_action_from_potential, corner_hazard
+    
+    obs = env.reset()
+    agent.reset()
+    walls_mask = env.walls.copy()
+    Hc = corner_hazard(walls_mask) if ablate.corner else np.zeros_like(walls_mask)
+    
+    print(f"[ascii] Starting episode (seed={args.seed})")
+    print(f"[ascii] Grid: {args.H}x{args.W}, Targets: A={args.nA}, B={args.nB}")
+    print(f"[ascii] Initial position: ({env.y}, {env.x})")
+    
+    # Show initial state
+    print("\n=== Initial World ===")
+    for y in range(env.H):
+        row = []
+        for x in range(env.W):
+            if env.walls[y, x]:
+                row.append('#')
+            elif y == env.y and x == env.x:
+                row.append('@')
+            elif env.TA[y, x]:
+                row.append('A')
+            elif env.TB[y, x]:
+                row.append('B')
+            else:
+                row.append('.')
+        print(''.join(row))
+    
+    ep_ret = 0.0
+    positions = []
+    
+    for t in range(args.max_steps):
+        _, fields = agent.step(obs)
+        GA = fields["GA"]; GB = fields["GB"]
+        Vtrail = fields["Vtrail"] if ablate.trail else np.zeros_like(GA)
+        Novel = fields["Novel"] if ablate.novelty else np.zeros_like(GA)
+        
+        # Frontier blending
+        U = fields.get("Frontier", np.zeros_like(GA))
+        if ablate.novelty:
+            trail_here = Vtrail[env.y, env.x]
+            frontier_weight = max(0.0, 0.25 * (1.0 - trail_here / 3.0))
+            Novel = Novel + frontier_weight * U
+        
+        P_eff = effective_potential(GA, GB, Novel, Vtrail, Hc,
+                                    wA=1.0, wB=0.9, wN=0.7,
+                                    kV=0.6, kH=0.5)
+        
+        # Action selection
+        trail_here = Vtrail[env.y, env.x]
+        if trail_here > 2.0:
+            temp = 0.5 + (trail_here - 2.0) * 0.5
+            temp = min(temp, 2.0)
+            no_backtrack = True
+            momentum = 0.0
+        else:
+            temp = 0.0
+            no_backtrack = False
+            momentum = 0.05
+        
+        a = pick_action_from_potential(
+            P_eff, env.y, env.x, walls_mask,
+            temperature=temp,
+            last_action=getattr(agent, "last_action", None),
+            no_backtrack=no_backtrack,
+            momentum=momentum
+        )
+        agent.last_action = a
+        
+        # Step environment
+        old_pos = (env.y, env.x)
+        obs, r, done, info = env.step(a)
+        ep_ret += r
+        new_pos = (env.y, env.x)
+        positions.append(new_pos)
+        
+        # Update stuck counter
+        if not info.get("moved", False):
+            agent.stuck_count += 1
+        else:
+            agent.stuck_count = 0
+        agent.last_pos = new_pos
+        
+        # Display every N steps
+        if (t + 1) % args.show_every == 0 or done:
+            print(f"\n=== Step {t+1} ===")
+            print(f"Action: {['↑','↓','←','→'][a]}, Moved: {info.get('moved')}")
+            print(f"Position: {old_pos} -> {new_pos}")
+            print(f"Trail: {trail_here:.2f}, Temp: {temp:.2f}, Return: {ep_ret:.2f}")
+            
+            if args.show_fields:
+                print(f"GA: {GA[env.y, env.x]:.3f}, GB: {GB[env.y, env.x]:.3f}")
+                print(f"Novel: {Novel[env.y, env.x]:.3f}, P_eff: {P_eff[env.y, env.x]:.3f}")
+            
+            # Show current world state
+            for y in range(env.H):
+                row = []
+                for x in range(env.W):
+                    if env.walls[y, x]:
+                        row.append('#')
+                    elif y == env.y and x == env.x:
+                        row.append('@')
+                    elif env.TA[y, x]:
+                        row.append('A')
+                    elif env.TB[y, x]:
+                        row.append('B')
+                    else:
+                        row.append('.')
+                print(''.join(row))
+        
+        if done:
+            break
+    
+    print(f"\n[ascii] Episode complete!")
+    print(f"[ascii] Final return: {ep_ret:.2f}")
+    print(f"[ascii] Steps: {t+1}")
+    
+    # Check for oscillation
+    if len(positions) >= 10:
+        unique_last_10 = len(set(positions[-10:]))
+        if unique_last_10 <= 3:
+            print(f"[ascii] Warning: Agent was stuck in small area (only {unique_last_10} unique positions in last 10 steps)")
+
+
 def main():
     """Main entry point."""
     parser = build_parser()
@@ -441,6 +601,8 @@ def main():
         run_gym_register(args)
     elif args.mode == "interactive":
         run_interactive(args)
+    elif args.mode == "ascii":
+        run_ascii(args)
     else:
         raise ValueError(f"Unknown mode: {args.mode}")
 

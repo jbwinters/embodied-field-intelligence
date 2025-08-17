@@ -5,6 +5,7 @@ from .fields import (
     update_visit_trail,
     update_novelty,
     corner_hazard,
+    wall_proximity_field,
     effective_potential,
     pick_action_from_potential,
 )
@@ -15,6 +16,7 @@ __all__ = [
     "update_visit_trail",
     "update_novelty",
     "corner_hazard",
+    "wall_proximity_field",
     "effective_potential",
     "pick_action_from_potential",
     "set_global_seed",
