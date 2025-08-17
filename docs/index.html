@@ -171,22 +171,22 @@
                         <div class="finding">
                             <span class="finding-icon">📊</span>
                             <div>
-                                <strong>Emergent Exploration:</strong> The repulsive trail field naturally 
-                                implements frontier-based exploration without explicit planning.
+                                <strong>Trail Field Critical:</strong> Removing the visit trail causes a 1.51 point 
+                                performance drop—the largest impact of any component. Without it, agents get trapped in local loops.
                             </div>
                         </div>
                         <div class="finding">
                             <span class="finding-icon">🎯</span>
                             <div>
-                                <strong>Robust Navigation:</strong> Field superposition handles multiple 
-                                targets and obstacles without mode switching.
+                                <strong>Scale Sweet Spot:</strong> 15×15 grids achieve optimal performance (+1.09 return). 
+                                Smaller grids are too constrained; larger ones dilute scent gradients.
                             </div>
                         </div>
                         <div class="finding">
                             <span class="finding-icon">🔄</span>
                             <div>
-                                <strong>Continuous Learning:</strong> Online valence updates allow the agent 
-                                to adapt target preferences based on experience.
+                                <strong>Lower Diffusion Better:</strong> Contrary to expectations, 0.10 diffusion rate 
+                                outperforms the default 0.25, suggesting local precision beats long-range guidance.
                             </div>
                         </div>
                     </div>
@@ -195,20 +195,20 @@
 
             <div class="stats-grid">
                 <div class="stat-box">
-                    <div class="stat-value">~85%</div>
-                    <div class="stat-label">Target Discovery Rate</div>
+                    <div class="stat-value">1.51</div>
+                    <div class="stat-label">Trail Field Impact (Return)</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-value">5×5</div>
-                    <div class="stat-label">Local Sensing Window</div>
+                    <div class="stat-value">97.5%</div>
+                    <div class="stat-label">Success Rate (10×10)</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-value">4-6</div>
-                    <div class="stat-label">Active Fields</div>
+                    <div class="stat-value">15×15</div>
+                    <div class="stat-label">Optimal Grid Size</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-value">O(N)</div>
-                    <div class="stat-label">Computational Complexity</div>
+                    <div class="stat-value">0.10</div>
+                    <div class="stat-label">Best Diffusion Rate</div>
                 </div>
             </div>
         </div>
@@ -226,9 +226,21 @@
                 </div>
                 
                 <div class="demo-card">
-                    <h3>Field Dynamics</h3>
-                    <img src="assets/images/analysis_charts.png" alt="Field visualization">
-                    <p>Visualization of interacting fields: scent gradients, visit trails, and novelty signals.</p>
+                    <h3>Performance Analysis</h3>
+                    <img src="assets/images/ablation_results.png" alt="Ablation study results">
+                    <p>Component ablation study showing the critical importance of the visit trail field.</p>
+                </div>
+                
+                <div class="demo-card">
+                    <h3>Scaling Behavior</h3>
+                    <img src="assets/images/scaling_results.png" alt="Scaling analysis">
+                    <p>Performance analysis across different environment scales from 10×10 to 30×30 grids.</p>
+                </div>
+                
+                <div class="demo-card">
+                    <h3>Parameter Sensitivity</h3>
+                    <img src="assets/images/sensitivity_results.png" alt="Sensitivity analysis">
+                    <p>Impact of scent diffusion rate on navigation performance.</p>
                 </div>
             </div>
 

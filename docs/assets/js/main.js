@@ -2,18 +2,28 @@
 
 // Load and render charts when page loads
 document.addEventListener('DOMContentLoaded', async () => {
-    // Load analysis data
+    // Load analysis data - try new comprehensive results first
     try {
-        const response = await fetch('assets/data/analysis_results.json');
+        const response = await fetch('assets/data/experiment_summary.json');
         const data = await response.json();
         
-        renderAblationChart(data.ablation);
-        renderScalingChart(data.scaling);
-        renderSensitivityChart(data.sensitivity);
+        renderAblationChart(data.ablation_results);
+        renderScalingChart(data.scale_results);
+        renderSensitivityChart(data.sensitivity_results);
     } catch (error) {
-        console.error('Error loading analysis data:', error);
-        // Use fallback data if file doesn't exist
-        useFallbackData();
+        console.error('Error loading experiment data, trying old format:', error);
+        try {
+            const response = await fetch('assets/data/analysis_results.json');
+            const data = await response.json();
+            
+            renderAblationChart(data.ablation);
+            renderScalingChart(data.scaling);
+            renderSensitivityChart(data.sensitivity);
+        } catch (error2) {
+            console.error('Error loading analysis data:', error2);
+            // Use fallback data if file doesn't exist
+            useFallbackData();
+        }
     }
     
     // Smooth scrolling for navigation links
