@@ -2,11 +2,13 @@
 
 from typing import List, Optional, Callable
 import time
+from pathlib import Path
+from datetime import datetime
 
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button, Slider
-from matplotlib.animation import FuncAnimation
+from matplotlib.animation import FuncAnimation, PillowWriter
 
 
 class InteractiveViewer:
@@ -185,6 +187,20 @@ class InteractiveViewer:
         )
         self.btn_reset.on_clicked(self._on_reset)
         
+        # Export GIF button
+        self.btn_export = Button(
+            plt.axes([0.75, y_pos, btn_width, btn_height]),
+            'Export GIF'
+        )
+        self.btn_export.on_clicked(self._on_export_gif)
+        
+        # Export Simple GIF button  
+        self.btn_export_simple = Button(
+            plt.axes([0.85, y_pos, btn_width, btn_height]),
+            'Simple GIF'
+        )
+        self.btn_export_simple.on_clicked(self._on_export_simple_gif)
+        
         # Speed control
         self.slider_speed = Slider(
             plt.axes([0.55, y_pos, 0.15, btn_height]),
@@ -285,6 +301,230 @@ class InteractiveViewer:
         frame_idx = int(val)
         if frame_idx != self.current_frame:
             self._update_frame(frame_idx)
+    
+    def _on_export_gif(self, event):
+        """Handle export GIF button."""
+        # Create output directory if it doesn't exist
+        output_dir = Path("exports")
+        output_dir.mkdir(exist_ok=True)
+        
+        # Generate filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        gif_path = output_dir / f"efi_episode_{timestamp}.gif"
+        
+        # Temporarily disable interactive elements
+        self.btn_export.label.set_text('Exporting...')
+        self.btn_export.ax.set_facecolor('#ffcccc')
+        self.fig.canvas.draw_idle()
+        
+        try:
+            # Create a new figure for the GIF with composite layout
+            self._export_gif_to_file(gif_path)
+            
+            # Show success message
+            self.btn_export.label.set_text('Export GIF')
+            self.btn_export.ax.set_facecolor('#ccffcc')
+            print(f"GIF exported successfully to: {gif_path}")
+            
+            # Reset button color after a moment
+            self.fig.canvas.draw_idle()
+            plt.pause(1.0)
+            self.btn_export.ax.set_facecolor('#f0f0f0')
+            
+        except Exception as e:
+            print(f"Error exporting GIF: {e}")
+            self.btn_export.label.set_text('Export Failed')
+            self.btn_export.ax.set_facecolor('#ffcccc')
+        
+        self.fig.canvas.draw_idle()
+    
+    def _export_gif_to_file(self, filepath: Path):
+        """Export the episode as an animated GIF."""
+        # Create a new figure for the export
+        export_fig = plt.figure(figsize=(12, 8))
+        export_fig.suptitle(f"EFI Episode - {len(self.frames)} frames", fontsize=12)
+        
+        # Create grid layout
+        from matplotlib.gridspec import GridSpec
+        gs = GridSpec(2, 3, figure=export_fig, height_ratios=[1, 1])
+        
+        # Create axes for export
+        axes = {}
+        axes['world'] = export_fig.add_subplot(gs[0, 0])
+        axes['GA'] = export_fig.add_subplot(gs[0, 1])
+        axes['GB'] = export_fig.add_subplot(gs[0, 2])
+        axes['P_eff'] = export_fig.add_subplot(gs[1, 0])
+        axes['Vtrail'] = export_fig.add_subplot(gs[1, 1])
+        axes['info'] = export_fig.add_subplot(gs[1, 2])
+        
+        # Initialize images for export
+        ims = {}
+        
+        # Setup world view
+        ax = axes['world']
+        world = self.world_frames[0] if self.world_frames else np.zeros((10,10,3), dtype=np.uint8)
+        ims['world'] = ax.imshow(world)
+        ax.set_title("World", fontsize=10)
+        ax.axis('off')
+        
+        if self.frames:
+            frame = self.frames[0]
+            
+            # GA field
+            ax = axes['GA']
+            ims['GA'] = ax.imshow(frame.get('GA', np.zeros((10,10))), cmap='Greens', vmin=0, vmax=1)
+            ax.set_title("GA (A scent)", fontsize=10)
+            ax.axis('off')
+            
+            # GB field  
+            ax = axes['GB']
+            ims['GB'] = ax.imshow(frame.get('GB', np.zeros((10,10))), cmap='Purples', vmin=0, vmax=1)
+            ax.set_title("GB (B scent)", fontsize=10)
+            ax.axis('off')
+            
+            # P_eff field
+            ax = axes['P_eff']
+            ims['P_eff'] = ax.imshow(frame.get('P_eff', np.zeros((10,10))), cmap='plasma')
+            ax.set_title("Effective Potential", fontsize=10)
+            ax.axis('off')
+            
+            # Visit trail
+            ax = axes['Vtrail']
+            ims['Vtrail'] = ax.imshow(frame.get('Vtrail', np.zeros((10,10))), cmap='Oranges', vmin=0, vmax=1)
+            ax.set_title("Visit Trail", fontsize=10)
+            ax.axis('off')
+        
+        # Info panel
+        ax = axes['info']
+        ax.axis('off')
+        info_text = ax.text(0.05, 0.5, "", fontsize=9, transform=ax.transAxes,
+                           verticalalignment='center', family='monospace')
+        
+        plt.tight_layout()
+        
+        # Animation update function
+        def update(frame_idx):
+            # Update world
+            if frame_idx < len(self.world_frames):
+                ims['world'].set_data(self.world_frames[frame_idx])
+            
+            # Update fields
+            if frame_idx < len(self.frames):
+                frame = self.frames[frame_idx]
+                
+                for field_name in ['GA', 'GB', 'P_eff', 'Vtrail']:
+                    if field_name in frame and field_name in ims:
+                        ims[field_name].set_data(frame[field_name])
+                
+                # Update info text
+                info = frame.get('info', {})
+                info_lines = [
+                    f"Frame: {frame_idx + 1}/{self.n_frames}",
+                    f"Step: {info.get('step', frame_idx)}",
+                    f"Return: {info.get('return', 0.0):+.3f}",
+                    f"Action: {info.get('action', 'N/A')}",
+                ]
+                info_text.set_text('\n'.join(info_lines))
+            
+            return list(ims.values()) + [info_text]
+        
+        # Create animation
+        anim = FuncAnimation(
+            export_fig, update,
+            frames=self.n_frames,
+            interval=int(1000.0 / self.fps),
+            blit=True
+        )
+        
+        # Save as GIF using Pillow
+        writer = PillowWriter(fps=self.fps)
+        anim.save(str(filepath), writer=writer, dpi=80)
+        
+        # Clean up
+        plt.close(export_fig)
+    
+    def _on_export_simple_gif(self, event):
+        """Handle export simple GIF button (world view only)."""
+        # Create output directory if it doesn't exist
+        output_dir = Path("exports")
+        output_dir.mkdir(exist_ok=True)
+        
+        # Generate filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        gif_path = output_dir / f"efi_world_{timestamp}.gif"
+        
+        # Temporarily disable interactive elements
+        self.btn_export_simple.label.set_text('Exporting...')
+        self.btn_export_simple.ax.set_facecolor('#ffcccc')
+        self.fig.canvas.draw_idle()
+        
+        try:
+            # Create a simple world-only GIF
+            self._export_simple_gif_to_file(gif_path)
+            
+            # Show success message
+            self.btn_export_simple.label.set_text('Simple GIF')
+            self.btn_export_simple.ax.set_facecolor('#ccffcc')
+            print(f"Simple GIF exported successfully to: {gif_path}")
+            
+            # Reset button color after a moment
+            self.fig.canvas.draw_idle()
+            plt.pause(1.0)
+            self.btn_export_simple.ax.set_facecolor('#f0f0f0')
+            
+        except Exception as e:
+            print(f"Error exporting simple GIF: {e}")
+            self.btn_export_simple.label.set_text('Export Failed')
+            self.btn_export_simple.ax.set_facecolor('#ffcccc')
+        
+        self.fig.canvas.draw_idle()
+    
+    def _export_simple_gif_to_file(self, filepath: Path):
+        """Export a simple world-only GIF for sharing."""
+        # Create a new figure for the export
+        export_fig = plt.figure(figsize=(6, 6))
+        
+        # Single axis for world view
+        ax = export_fig.add_subplot(111)
+        world = self.world_frames[0] if self.world_frames else np.zeros((10,10,3), dtype=np.uint8)
+        im = ax.imshow(world)
+        ax.set_title("EFI Agent Navigation", fontsize=14, fontweight='bold')
+        ax.axis('off')
+        
+        # Add frame counter
+        frame_text = ax.text(0.02, 0.98, '', transform=ax.transAxes,
+                            fontsize=10, verticalalignment='top',
+                            bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+        
+        plt.tight_layout()
+        
+        # Animation update function
+        def update(frame_idx):
+            # Update world
+            if frame_idx < len(self.world_frames):
+                im.set_data(self.world_frames[frame_idx])
+            
+            # Update frame counter
+            if frame_idx < len(self.frames):
+                info = self.frames[frame_idx].get('info', {})
+                frame_text.set_text(f"Step {frame_idx+1}/{self.n_frames} | Score: {info.get('return', 0.0):+.2f}")
+            
+            return [im, frame_text]
+        
+        # Create animation
+        anim = FuncAnimation(
+            export_fig, update,
+            frames=self.n_frames,
+            interval=int(1000.0 / self.fps),
+            blit=True
+        )
+        
+        # Save as GIF using Pillow with optimized settings for smaller file size
+        writer = PillowWriter(fps=self.fps)
+        anim.save(str(filepath), writer=writer, dpi=60)
+        
+        # Clean up
+        plt.close(export_fig)
             
     def _start_animation(self):
         """Start animation playback."""

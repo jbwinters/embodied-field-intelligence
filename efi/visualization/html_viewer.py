@@ -50,6 +50,12 @@ def create_html_viewer(episode_data: dict, output_path: str = "interactive_viewe
     world_frames = episode_data.get('world_frames', [])
     metrics = episode_data.get('metrics', {})
     
+    # Convert metrics object to dict if needed
+    if hasattr(metrics, '__dict__'):
+        metrics = vars(metrics)
+    elif not isinstance(metrics, dict):
+        metrics = {}
+    
     if not frames:
         print("No frames to display")
         return None
@@ -187,6 +193,8 @@ def create_html_viewer(episode_data: dict, output_path: str = "interactive_viewe
             <button onclick="prevFrame()">⏮ Prev</button>
             <button onclick="nextFrame()">⏭ Next</button>
             <button onclick="reset()">⏹ Reset</button>
+            <button onclick="exportGIF()">📥 Export GIF</button>
+            <button onclick="exportSimpleGIF()">📷 Simple GIF</button>
             
             <div class="slider-container">
                 <span class="label">Speed:</span>
@@ -349,6 +357,29 @@ def create_html_viewer(episode_data: dict, output_path: str = "interactive_viewe
             stopPlay();
             currentFrame = 0;
             updateDisplay();
+        }
+        
+        function exportGIF() {
+            alert('GIF Export Instructions:\\n\\n' +
+                  'Use the standalone GIF exporter:\\n\\n' +
+                  'python export_gif.py --mode full\\n\\n' +
+                  'Add parameters to match your episode:\\n' +
+                  '--seed [seed] --H [height] --W [width] --max-steps [steps]\\n' +
+                  '--nA [A_targets] --nB [B_targets]\\n\\n' +
+                  'This will re-run the episode and export a full multi-panel GIF.\\n' +
+                  'The GIF will be saved in the exports/ directory.');
+        }
+        
+        function exportSimpleGIF() {
+            alert('Simple GIF Export Instructions:\\n\\n' +
+                  'Use the standalone GIF exporter:\\n\\n' +
+                  'python export_gif.py --mode simple\\n\\n' +
+                  'Add parameters to match your episode:\\n' +
+                  '--seed [seed] --H [height] --W [width] --max-steps [steps]\\n' +
+                  '--nA [A_targets] --nB [B_targets]\\n\\n' +
+                  'This will re-run the episode and export a simple world-only GIF.\\n' +
+                  'The GIF will be saved in the exports/ directory.\\n\\n' +
+                  'Note: Simple GIFs are ~10x smaller and better for sharing!');
         }
         
         // Initial display

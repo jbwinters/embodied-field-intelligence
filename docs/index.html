@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Embodied Field Intelligence - Research Overview</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="assets/js/main.js" defer></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <h1 class="nav-title">EFI Research</h1>
+            <ul class="nav-links">
+                <li><a href="#overview">Overview</a></li>
+                <li><a href="#approach">Approach</a></li>
+                <li><a href="#results">Results</a></li>
+                <li><a href="#demos">Demos</a></li>
+                <li><a href="https://github.com/your-repo/embodied_field_intelligence">GitHub</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <div class="container">
+            <h1>Embodied Field Intelligence</h1>
+            <p class="subtitle">CA-Based Navigation Through Emergent Field Dynamics</p>
+            <div class="hero-demo">
+                <img src="assets/images/efi_simple_20250817_172738.gif" alt="EFI Agent Demo" class="demo-gif">
+            </div>
+        </div>
+    </header>
+
+    <section id="overview" class="section">
+        <div class="container">
+            <h2>Research Overview</h2>
+            <div class="content-grid">
+                <div class="content-main">
+                    <p class="lead">
+                        Embodied Field Intelligence (EFI) explores a novel approach to autonomous navigation using 
+                        cellular automata (CA) as a computational substrate for real-time, distributed intelligence.
+                    </p>
+                    <p>
+                        Unlike traditional neural networks or planning algorithms, EFI agents make decisions through 
+                        the emergent dynamics of interacting fields—scent gradients, memory trails, and novelty signals—that 
+                        flow and evolve across a grid-based substrate.
+                    </p>
+                    
+                    <h3>Key Innovations</h3>
+                    <ul class="feature-list">
+                        <li><strong>Field-Based Cognition:</strong> Intelligence emerges from the interaction of multiple diffusing fields rather than centralized computation</li>
+                        <li><strong>Embodied Memory:</strong> The agent's path history becomes a repulsive field, naturally implementing exploration vs exploitation</li>
+                        <li><strong>Continuous Adaptation:</strong> No separate training/inference phases—the system learns and adapts continuously</li>
+                        <li><strong>Interpretable Dynamics:</strong> Field visualizations provide direct insight into decision-making processes</li>
+                    </ul>
+                </div>
+                <div class="content-side">
+                    <div class="info-box">
+                        <h4>Quick Facts</h4>
+                        <ul>
+                            <li>🧬 <strong>Substrate:</strong> 2D Cellular Automata</li>
+                            <li>🎯 <strong>Task:</strong> Multi-target foraging</li>
+                            <li>🔄 <strong>Updates:</strong> Fully parallel, local only</li>
+                            <li>👁️ <strong>Sensing:</strong> 5×5 local window</li>
+                            <li>💾 <strong>Memory:</strong> Diffusing trail fields</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="approach" class="section alt-bg">
+        <div class="container">
+            <h2>Technical Approach</h2>
+            
+            <div class="approach-grid">
+                <div class="approach-card">
+                    <div class="card-icon">🌊</div>
+                    <h3>Chemotaxis Fields</h3>
+                    <p>
+                        Target detection triggers scent injection into local fields. These gradients diffuse 
+                        outward, creating attraction basins that guide navigation through complex environments.
+                    </p>
+                </div>
+                
+                <div class="approach-card">
+                    <div class="card-icon">🗺️</div>
+                    <h3>Visit Trail Memory</h3>
+                    <p>
+                        The agent deposits a repulsive trail at visited locations. This field decays over time, 
+                        balancing exploration of new areas with exploitation of known targets.
+                    </p>
+                </div>
+                
+                <div class="approach-card">
+                    <div class="card-icon">✨</div>
+                    <h3>Novelty Detection</h3>
+                    <p>
+                        Changes in local observations generate novelty signals, attracting the agent toward 
+                        unexplored or dynamically changing regions of the environment.
+                    </p>
+                </div>
+                
+                <div class="approach-card">
+                    <div class="card-icon">⚡</div>
+                    <h3>Action Selection</h3>
+                    <p>
+                        Movement emerges from local potential gradients. The agent moves toward lower potential, 
+                        computed as a weighted combination of all active fields.
+                    </p>
+                </div>
+            </div>
+
+            <div class="math-section">
+                <h3>Core Dynamics</h3>
+                <div class="equation">
+                    <p><strong>Diffusion Update:</strong></p>
+                    <code>F(t+1) = (1-decay) × [F(t) + diff × Laplacian(F(t))]</code>
+                </div>
+                <div class="equation">
+                    <p><strong>Effective Potential:</strong></p>
+                    <code>P_eff = -k_A×GA - k_B×GB + k_rep×V - k_nov×N + H_corner</code>
+                </div>
+                <div class="equation">
+                    <p><strong>Action Selection:</strong></p>
+                    <code>a = argmin[P_eff(neighbors)] + Gumbel_noise(T)</code>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="results" class="section">
+        <div class="container">
+            <h2>Experimental Results</h2>
+            
+            <div class="results-grid">
+                <div class="result-card">
+                    <h3>Ablation Study</h3>
+                    <canvas id="ablationChart"></canvas>
+                    <p class="chart-caption">
+                        Each component contributes to overall performance. Removing the visit trail has the 
+                        strongest negative impact, preventing exploration.
+                    </p>
+                </div>
+                
+                <div class="result-card">
+                    <h3>Scaling Analysis</h3>
+                    <canvas id="scalingChart"></canvas>
+                    <p class="chart-caption">
+                        Performance improves with environment size as larger grids provide more opportunities 
+                        for successful navigation paths.
+                    </p>
+                </div>
+            </div>
+
+            <div class="results-grid">
+                <div class="result-card">
+                    <h3>Parameter Sensitivity</h3>
+                    <canvas id="sensitivityChart"></canvas>
+                    <p class="chart-caption">
+                        Scent diffusion rate shows an optimal range around 0.25, balancing local precision 
+                        with long-range guidance.
+                    </p>
+                </div>
+                
+                <div class="result-card">
+                    <h3>Key Findings</h3>
+                    <div class="findings-list">
+                        <div class="finding">
+                            <span class="finding-icon">📊</span>
+                            <div>
+                                <strong>Emergent Exploration:</strong> The repulsive trail field naturally 
+                                implements frontier-based exploration without explicit planning.
+                            </div>
+                        </div>
+                        <div class="finding">
+                            <span class="finding-icon">🎯</span>
+                            <div>
+                                <strong>Robust Navigation:</strong> Field superposition handles multiple 
+                                targets and obstacles without mode switching.
+                            </div>
+                        </div>
+                        <div class="finding">
+                            <span class="finding-icon">🔄</span>
+                            <div>
+                                <strong>Continuous Learning:</strong> Online valence updates allow the agent 
+                                to adapt target preferences based on experience.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-value">~85%</div>
+                    <div class="stat-label">Target Discovery Rate</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">5×5</div>
+                    <div class="stat-label">Local Sensing Window</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">4-6</div>
+                    <div class="stat-label">Active Fields</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">O(N)</div>
+                    <div class="stat-label">Computational Complexity</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="demos" class="section alt-bg">
+        <div class="container">
+            <h2>Interactive Demonstrations</h2>
+            
+            <div class="demo-grid">
+                <div class="demo-card">
+                    <h3>Basic Navigation</h3>
+                    <img src="assets/images/efi_simple_20250817_172738.gif" alt="Basic navigation demo">
+                    <p>Agent navigating a 20×20 grid with walls and multiple targets using chemotaxis fields.</p>
+                </div>
+                
+                <div class="demo-card">
+                    <h3>Field Dynamics</h3>
+                    <img src="assets/images/analysis_charts.png" alt="Field visualization">
+                    <p>Visualization of interacting fields: scent gradients, visit trails, and novelty signals.</p>
+                </div>
+            </div>
+
+            <div class="code-section">
+                <h3>Try It Yourself</h3>
+                <pre><code># Install the package
+pip install -r requirements.txt
+pip install -e .
+
+# Run interactive viewer
+python cli.py interactive --seed 6 --H 30 --W 30
+
+# Export episode as GIF
+python export_gif.py --seed 42 --mode simple
+
+# Run evaluation suite
+python cli.py eval --episodes 100 --seeds 5</code></pre>
+            </div>
+        </div>
+    </section>
+
+    <section id="future" class="section">
+        <div class="container">
+            <h2>Future Directions</h2>
+            
+            <div class="future-grid">
+                <div class="future-card">
+                    <h3>🤖 Robot Deployment</h3>
+                    <p>Implementing EFI on physical robots for real-world navigation tasks with local sensing only.</p>
+                </div>
+                <div class="future-card">
+                    <h3>🧠 Hybrid Intelligence</h3>
+                    <p>Combining EFI's reactive control with LLMs for high-level planning and goal selection.</p>
+                </div>
+                <div class="future-card">
+                    <h3>👥 Multi-Agent Systems</h3>
+                    <p>Coordinating multiple agents through shared pheromone fields and stigmergic communication.</p>
+                </div>
+                <div class="future-card">
+                    <h3>📐 3D Environments</h3>
+                    <p>Extending the CA substrate to 3D grids for volumetric navigation and manipulation tasks.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div>
+                    <h4>Embodied Field Intelligence</h4>
+                    <p>Exploring emergent intelligence through cellular automata</p>
+                </div>
+                <div>
+                    <h4>Resources</h4>
+                    <ul>
+                        <li><a href="https://github.com/your-repo/embodied_field_intelligence">GitHub Repository</a></li>
+                        <li><a href="#paper">Research Paper</a></li>
+                        <li><a href="#docs">Documentation</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 EFI Research. MIT License.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
