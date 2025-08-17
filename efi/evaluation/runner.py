@@ -54,37 +54,79 @@ def run_episode(
             frontier_weight = max(0.0, 0.25 * (1.0 - trail_here / 3.0))
             Novel = Novel + frontier_weight * U
         
-        # --- Base potential (no schema bias yet) with learned valences ---
-        if hasattr(agent, 'valence') and isinstance(agent.valence, dict):
-            # Channel-agnostic composition
-            attractors = {"A": GA, "B": GB, "Novel": Novel}
-            repulsors = {"Trail": Vtrail, "Corner": Hc}
-            w_attr = {
-                "A": agent.valence.get("A", 1.0),
-                "B": agent.valence.get("B", 1.0),
-                "Novel": 0.7
-            }
-            w_rep = {"Trail": 0.6, "Corner": 0.5}
-            P_base = compose_potential(attractors, repulsors, w_attr, w_rep, bias=None)
-        else:
-            # Legacy method for backwards compatibility
-            P_base = effective_potential(GA, GB, Novel, Vtrail, Hc,
-                                        wA=agent.valA,
-                                        wB=agent.valB,
-                                        wN=0.7,
-                                        kV=0.6, kH=0.5)
-
-        # Schema bias (learned from base potential, applied after)
-        Ssum = np.zeros_like(P_base)
-        schema_bias = None
-        if schema and schema.cfg.enabled and ablate.schema:
-            feats = build_features_for_schema(GA, GB, Novel, Vtrail, Hc, P_base)
-            schema.update(feats)
-            Ssum = np.sum(schema.Smaps, axis=0).astype(np.float32)
-            schema_bias = schema.bias_field()
+        # Compute frontier weight based on trail strength at current position
+        trail_here = Vtrail[env.y, env.x]
+        frontier_weight = 0.0
+        if ablate.novelty:
+            frontier_weight = max(0.0, 0.25 * (1.0 - trail_here / 3.0))
         
-        # Final potential = base + (optional) schema bias
-        P_eff = P_base + (schema_bias if schema_bias is not None else 0.0)
+        # --- Potential composition ---
+        if hasattr(agent, "compose_P"):
+            # Agent has compose_P method - delegate to it
+            # First compute schema if needed
+            schema_bias = None
+            Ssum = np.zeros_like(GA)
+            if schema and schema.cfg.enabled and ablate.schema:
+                # Need a base potential for schema learning
+                # Quick compose without schema to get P_base
+                P_base_for_schema = agent.compose_P(
+                    walls_mask=walls_mask,
+                    corner_field=Hc if ablate.corner else None,
+                    schema_bias=None,
+                    frontier_weight=frontier_weight
+                )
+                feats = build_features_for_schema(GA, GB, Novel, Vtrail, Hc, P_base_for_schema)
+                schema.update(feats)
+                Ssum = np.sum(schema.Smaps, axis=0).astype(np.float32)
+                schema_bias = schema.bias_field()
+            
+            # Final composition with schema
+            P_eff = agent.compose_P(
+                walls_mask=walls_mask,
+                corner_field=Hc if ablate.corner else None,
+                schema_bias=schema_bias,
+                frontier_weight=frontier_weight
+            )
+        else:
+            # Legacy path - manual composition
+            # Blend frontier into novelty (as before)
+            if ablate.novelty and frontier_weight != 0.0:
+                Novel = Novel + frontier_weight * U
+            
+            if hasattr(agent, 'valence') and isinstance(agent.valence, dict):
+                # Channel-agnostic composition
+                attractors = {"A": GA, "B": GB, "Novel": Novel}
+                repulsors = {"Trail": Vtrail, "Corner": Hc}
+                w_attr = {
+                    "A": agent.valence.get("A", 1.0),
+                    "B": agent.valence.get("B", 1.0),
+                    "Novel": agent.valence.get("Novel", agent.cfg.w_novel)
+                }
+                w_rep = {
+                    "Trail": agent.cfg.w_trail,
+                    "Corner": agent.cfg.w_corner
+                }
+                P_base = compose_potential(attractors, repulsors, w_attr, w_rep, bias=None)
+            else:
+                # Legacy method for backwards compatibility
+                P_base = effective_potential(GA, GB, Novel, Vtrail, Hc,
+                                            wA=agent.valA,
+                                            wB=agent.valB,
+                                            wN=agent.cfg.w_novel,
+                                            kV=agent.cfg.w_trail,
+                                            kH=agent.cfg.w_corner)
+
+            # Schema bias (learned from base potential, applied after)
+            Ssum = np.zeros_like(P_base)
+            schema_bias = None
+            if schema and schema.cfg.enabled and ablate.schema:
+                feats = build_features_for_schema(GA, GB, Novel, Vtrail, Hc, P_base)
+                schema.update(feats)
+                Ssum = np.sum(schema.Smaps, axis=0).astype(np.float32)
+                schema_bias = schema.bias_field()
+            
+            # Final potential = base + (optional) schema bias
+            P_eff = P_base + (schema_bias if schema_bias is not None else 0.0)
 
         # Use trail strength as natural "stuck" signal
         # High trail means we've been here too much

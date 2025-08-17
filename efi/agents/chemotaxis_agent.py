@@ -37,9 +37,7 @@ class ChemotaxisAgentCA:
         self.valence = {
             "A": float(self.cfg.valA_init),
             "B": float(self.cfg.valB_init),
-            # Can also learn weights for novelty/trail if desired:
-            # "Novel": 0.7,    # start fixed or learn slowly
-            # "Trail": 0.6,    # repulsor weight
+            "Novel": float(self.cfg.w_novel),  # Can be learned slowly if desired
         }
         # Backwards compatibility
         self.valA = self.valence["A"]
@@ -180,3 +178,56 @@ class ChemotaxisAgentCA:
             "known_walls": self.known_walls.copy(),
         }
         return -1, fields
+    
+    def compose_P(self, walls_mask: np.ndarray,
+                  corner_field: np.ndarray = None,
+                  schema_bias: np.ndarray = None,
+                  frontier_weight: float = 0.0) -> np.ndarray:
+        """
+        Compose potential field from all influences.
+        Provides same interface as FieldController for consistency.
+        
+        Args:
+            walls_mask: Boolean mask of walls
+            corner_field: Optional corner hazard field
+            schema_bias: Optional schema bias field
+            frontier_weight: Weight for blending frontier into novelty
+            
+        Returns:
+            Composed potential field
+        """
+        from ..core.potential import compose_potential
+        
+        # Blend frontier into novelty if requested
+        novelty = self.Nv
+        if frontier_weight != 0.0 and hasattr(self, 'Frontier'):
+            novelty = novelty + frontier_weight * getattr(self, 'Frontier', np.zeros_like(novelty))
+        
+        # Prepare fields
+        attractors = {
+            "A": self.GA,
+            "B": self.GB,
+            "Novel": novelty,
+        }
+        
+        repulsors = {
+            "Trail": self.V,
+        }
+        
+        if corner_field is not None:
+            repulsors["Corner"] = corner_field
+        
+        # Get weights from valence dict
+        w_attr = {
+            "A": self.valence.get("A", 1.0),
+            "B": self.valence.get("B", 1.0),
+            "Novel": self.valence.get("Novel", self.cfg.w_novel),
+        }
+        
+        w_rep = {
+            "Trail": self.cfg.w_trail,
+            "Corner": self.cfg.w_corner if corner_field is not None else 0.0,
+        }
+        
+        # Compose
+        return compose_potential(attractors, repulsors, w_attr, w_rep, bias=schema_bias)

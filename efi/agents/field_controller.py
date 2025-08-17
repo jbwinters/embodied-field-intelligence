@@ -59,7 +59,7 @@ class FieldController:
         self.valence = {
             "A": float(cfg.valA_init),
             "B": float(cfg.valB_init),
-            "Novel": 0.7,  # Can optionally learn slowly
+            "Novel": float(cfg.w_novel),  # Can optionally learn slowly
         }
         
         # Backwards compatibility attributes
@@ -252,12 +252,12 @@ class FieldController:
         w_attr = {
             "A": self.valence.get("A", 1.0),
             "B": self.valence.get("B", 1.0),
-            "Novel": self.valence.get("Novel", 0.7),
+            "Novel": self.valence.get("Novel", self.cfg.w_novel),
         }
         
         w_rep = {
-            "Trail": 0.6,
-            "Corner": 0.5 if corner_field is not None else 0.0,
+            "Trail": self.cfg.w_trail,
+            "Corner": self.cfg.w_corner if corner_field is not None else 0.0,
         }
         
         # Compose potential

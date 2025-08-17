@@ -12,7 +12,6 @@ def diffuse_masked(F: np.ndarray, walls_mask: np.ndarray,
     F = F.astype(np.float32, copy=True)
     W = (walls_mask > 0)
     P = (~W).astype(np.float32)           # 1=passable, 0=wall
-    H, Wd = F.shape
 
     for _ in range(max(1, steps)):
         S = np.zeros_like(F, dtype=np.float32)

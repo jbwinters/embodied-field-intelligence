@@ -36,6 +36,11 @@ class AgentConfig:
     valence_lr: float = 0.25    # how fast to adapt (tune 0.1–0.4)
     valence_clip: float = 1.5   # keep weights in a sane range
     
+    # Field weights (to avoid magic numbers)
+    w_novel: float = 0.7        # Novelty attraction weight
+    w_trail: float = 0.6        # Trail repulsion weight  
+    w_corner: float = 0.5       # Corner hazard repulsion weight
+    
     # Random seed
     seed: int = 0
 
