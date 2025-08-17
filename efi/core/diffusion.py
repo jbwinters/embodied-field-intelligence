@@ -35,8 +35,6 @@ def diffuse_masked(F: np.ndarray, walls_mask: np.ndarray,
         F = (1.0 - diff) * F + diff * avg
         F *= (1.0 - decay)
 
-        # impose walls and border as sinks
+        # impose walls as sinks (but NOT borders - agents can walk on edges!)
         F[W] = 0.0
-        F[0, :] = F[-1, :] = 0.0
-        F[:, 0] = F[:, -1] = 0.0
     return F

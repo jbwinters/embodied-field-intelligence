@@ -33,8 +33,20 @@ class ChemotaxisAgentCA:
         self.ablate = ablate
         self.rng = np.random.RandomState(cfg.seed)
         self.H, self.W, self.win = env.H, env.W, env.win
+        # Initialize valence weights (persist across episodes for learning)
+        self.valA = float(self.cfg.valA_init)
+        self.valB = float(self.cfg.valB_init)
         self.reset()
 
+    def learn_valence(self, kind: str, reward: float):
+        """Update valence weights based on experienced reward."""
+        lr = float(self.cfg.valence_lr)
+        clip = float(getattr(self.cfg, "valence_clip", 1.5))
+        if kind == "A":
+            self.valA = float(np.clip(self.valA + lr * reward, -clip, clip))
+        elif kind == "B":
+            self.valB = float(np.clip(self.valB + lr * reward, -clip, clip))
+    
     def reset(self):
         """Reset agent state for new episode."""
         self.GA = np.zeros((self.H, self.W), dtype=np.float32)

@@ -120,6 +120,7 @@ class ForageWorld:
         ny, nx = self.y + dy, self.x + dx
         reward = self.cfg.step_cost
         moved = False
+        picked = None
         
         if (0 <= ny < self.H) and (0 <= nx < self.W) and (not self.walls[ny, nx]):
             self.y, self.x = ny, nx
@@ -131,12 +132,14 @@ class ForageWorld:
         if self.TA[self.y, self.x]:
             reward += self.cfg.reward_A
             self.TA[self.y, self.x] = False
+            picked = "A"
         elif self.TB[self.y, self.x]:
             reward += self.cfg.reward_B
             self.TB[self.y, self.x] = False
+            picked = "B"
 
         done = (self.t >= self.max_steps) or (not self.TA.any() and not self.TB.any())
-        info = {"moved": moved}
+        info = {"moved": moved, "picked": picked}
         
         return self._obs(), float(reward), bool(done), info
 

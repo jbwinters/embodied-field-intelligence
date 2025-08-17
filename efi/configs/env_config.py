@@ -16,8 +16,8 @@ class EnvConfig:
     
     # World generation
     p_wall: float = 0.12
-    n_targets_A: int = 3
-    n_targets_B: int = 3
+    n_targets_A: int = 2
+    n_targets_B: int = 4  # More B targets for faster learning signal
     
     # Episode settings
     max_steps: int = 200
@@ -26,7 +26,7 @@ class EnvConfig:
     step_cost: float = -0.01
     bump_pen: float = -0.02
     reward_A: float = +1.0
-    reward_B: float = +0.6
+    reward_B: float = -0.8  # Now aversive!
     
     # Random seed
     seed: int = 0

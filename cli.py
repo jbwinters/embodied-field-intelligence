@@ -26,8 +26,8 @@ def add_common_args(parser):
     parser.add_argument("--W", type=int, default=17, help="Grid width")
     parser.add_argument("--win", type=int, default=5, help="Observation window size")
     parser.add_argument("--p-wall", type=float, default=0.12, dest="p_wall", help="Wall probability")
-    parser.add_argument("--nA", type=int, default=3, help="Number of A targets")
-    parser.add_argument("--nB", type=int, default=3, help="Number of B targets")
+    parser.add_argument("--nA", type=int, default=2, help="Number of A targets")
+    parser.add_argument("--nB", type=int, default=4, help="Number of B targets")
     parser.add_argument("--max-steps", type=int, default=200, dest="max_steps", help="Max episode steps")
     parser.add_argument("--seed", type=int, default=0, help="Random seed")
     

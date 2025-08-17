@@ -30,6 +30,12 @@ class AgentConfig:
     # Internal processing
     internal_think: int = 0  # extra diffusion ticks per step
     
+    # Valence learning (A desirable, B undesirable will be learned online)
+    valA_init: float = 0.10
+    valB_init: float = 0.10     # start neutral-ish so behavior emerges
+    valence_lr: float = 0.25    # how fast to adapt (tune 0.1–0.4)
+    valence_clip: float = 1.5   # keep weights in a sane range
+    
     # Random seed
     seed: int = 0
 

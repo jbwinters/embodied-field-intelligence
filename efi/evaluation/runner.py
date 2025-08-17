@@ -51,9 +51,11 @@ def run_episode(
             frontier_weight = max(0.0, 0.25 * (1.0 - trail_here / 3.0))
             Novel = Novel + frontier_weight * U
         
-        # Base potential with rebalanced weights
+        # Base potential with learned valence weights
         P_eff = effective_potential(GA, GB, Novel, Vtrail, Hc,
-                                    wA=1.0, wB=0.9, wN=0.7,  # strong novelty for exploration
+                                    wA=agent.valA,           # learned attraction/repulsion for A
+                                    wB=agent.valB,           # learned attraction/repulsion for B (will go negative!)
+                                    wN=0.7,                  # novelty weight
                                     kV=0.6, kH=0.5)          # moderate repulsion
 
         # Schema bias (learned, slow)
@@ -99,12 +101,14 @@ def run_episode(
             agent.stuck_count = 0
         agent.last_pos = (env.y, env.x)
 
-        # Count pickups
-        if r > 0.5:            # collected some target
-            if r > 0.8:        # A vs B (thresholds from your reward_A/B)
-                targets_collected["A"] += 1
-            else:
-                targets_collected["B"] += 1
+        # Learn from pickups
+        picked = info.get("picked")
+        if picked == "A":
+            targets_collected["A"] += 1
+            agent.learn_valence("A", env.cfg.reward_A)
+        elif picked == "B":
+            targets_collected["B"] += 1
+            agent.learn_valence("B", env.cfg.reward_B)
 
         # Optionally record frames & fields
         if record:
@@ -126,7 +130,9 @@ def run_episode(
                     'return': ep_ret,
                     'action': a,
                     'stuck_count': agent.stuck_count,
-                    'reward': r
+                    'reward': r,
+                    'valA': float(agent.valA),
+                    'valB': float(agent.valB)
                 }
             })
 
