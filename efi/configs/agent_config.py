@@ -9,9 +9,9 @@ class AgentConfig:
     
     # Scent field parameters
     seed_strength: float = 0.6
-    scent_diff: float = 0.14
+    scent_diff: float = 0.16  # Increased for better gradients
     scent_decay: float = 0.01
-    scent_steps: int = 2
+    scent_steps: int = 3  # More steps for smoother gradients
     
     # Visit trail parameters
     v_inj: float = 1.0
@@ -20,11 +20,11 @@ class AgentConfig:
     k_repulse: float = 0.30
     
     # Exploration parameters
-    wander: float = 0.08
+    wander: float = 0.12  # Increased to prevent corner trapping
     stay_thresh: float = 0.02
     
     # Anti-stuck mechanism
-    anti_stuck_after: int = 3
+    anti_stuck_after: int = 2  # Trigger sooner
     anti_stuck_temp: float = 0.6
     
     # Internal processing

@@ -26,47 +26,27 @@ def run_episode(
     record: bool = False,
     record_fields: bool = False
 ) -> Tuple[float, List[np.ndarray], EpisodeMetrics, Optional[dict]]:
-    """
-    Run one episode.
-    
-    Args:
-        env: ForageWorld environment
-        agent: ChemotaxisAgentCA agent
-        schema: Optional SchemaField for learning
-        ablate: Ablation flags
-        render: Rendering mode ("none" or "live")
-        record: Whether to record frames
-        record_fields: Whether to record field data for interactive viewer
-        
-    Returns:
-        Tuple of (return, frames, metrics, episode_data)
-    """
     obs = env.reset()
     agent.reset()
     walls_mask = env.walls.copy()
     Hc = corner_hazard(walls_mask) if ablate.corner else np.zeros_like(walls_mask, dtype=np.float32)
-    
+
     ep_ret = 0.0
-    frames = []
-    field_frames = []
-    world_frames = []
+    frames, field_frames, world_frames = [], [], []
     steps = 0
     targets_collected = {"A": 0, "B": 0}
 
     for t in range(env.max_steps):
         _, fields = agent.step(obs)
-        GA = fields["GA"]
-        GB = fields["GB"]
+        GA = fields["GA"]; GB = fields["GB"]
         Vtrail = fields["Vtrail"] if ablate.trail else np.zeros_like(GA)
-        Novel = fields["Novel"] if ablate.novelty else np.zeros_like(GA)
+        Novel  = fields["Novel"]  if ablate.novelty else np.zeros_like(GA)
 
-        # Effective potential (schema bias added later if enabled)
-        P_eff = effective_potential(
-            GA, GB, Novel, Vtrail, Hc,
-            wA=1.0, wB=0.9, wN=0.5, kV=0.7, kH=0.55
-        )
+        # Base potential
+        P_eff = effective_potential(GA, GB, Novel, Vtrail, Hc,
+                                    wA=1.0, wB=0.9, wN=0.5, kV=0.7, kH=0.55)
 
-        # Schema: update from current features and bias P
+        # Schema bias (learned, slow)
         Ssum = np.zeros_like(P_eff)
         if schema and schema.cfg.enabled and ablate.schema:
             feats = build_features_for_schema(GA, GB, Novel, Vtrail, Hc, P_eff)
@@ -74,33 +54,42 @@ def run_episode(
             Ssum = np.sum(schema.Smaps, axis=0).astype(np.float32)
             P_eff = P_eff + schema.bias_field()
 
-        # Anti-stuck temperature if needed
+        # Exploration noise (wander) to break ties / leave corners
+        if getattr(agent.cfg, "wander", 0.0) > 0.0:
+            P_eff = P_eff + agent.cfg.wander * agent.rng.randn(*P_eff.shape).astype(np.float32)
+
+        # Anti-stuck temperature based on last *actual* move (updated after step)
         temp = agent.cfg.anti_stuck_temp if agent.stuck_count >= agent.cfg.anti_stuck_after else 0.0
         a = pick_action_from_potential(P_eff, env.y, env.x, walls_mask, temperature=temp)
 
-        # Step environment
+        # Step env
         obs, r, done, info = env.step(a)
         ep_ret += r
         steps += 1
 
-        # Track targets collected
-        if r > 0.5:  # Collected a target
-            if r > 0.8:  # Target A
+        # Update stuck counter from the truth on the ground
+        if not info.get("moved", False):
+            agent.stuck_count += 1
+        else:
+            agent.stuck_count = 0
+        agent.last_pos = (env.y, env.x)
+
+        # Count pickups
+        if r > 0.5:            # collected some target
+            if r > 0.8:        # A vs B (thresholds from your reward_A/B)
                 targets_collected["A"] += 1
-            else:  # Target B
+            else:
                 targets_collected["B"] += 1
 
-        # Record frame if requested
+        # Optionally record frames & fields
         if record:
             world_rgb = env.render_rgb()
             frames.append(world_rgb.copy())
-        
-        # Record fields for interactive viewer
+
         if record_fields:
             world_rgb = env.render_rgb()
             world_frames.append(world_rgb.copy())
-            
-            field_frame = {
+            field_frames.append({
                 'GA': GA.copy(),
                 'GB': GB.copy(),
                 'P_eff': P_eff.copy(),
@@ -114,8 +103,7 @@ def run_episode(
                     'stuck_count': agent.stuck_count,
                     'reward': r
                 }
-            }
-            field_frames.append(field_frame)
+            })
 
         if done:
             break
@@ -124,9 +112,9 @@ def run_episode(
         total_return=float(ep_ret),
         steps=steps,
         targets_collected=targets_collected,
-        efficiency=float(ep_ret) / max(1, steps)
+        efficiency=float(ep_ret)/max(1, steps)
     )
-    
+
     episode_data = None
     if record_fields:
         episode_data = {
