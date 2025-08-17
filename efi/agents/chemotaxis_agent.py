@@ -33,19 +33,29 @@ class ChemotaxisAgentCA:
         self.ablate = ablate
         self.rng = np.random.RandomState(cfg.seed)
         self.H, self.W, self.win = env.H, env.W, env.win
-        # Initialize valence weights (persist across episodes for learning)
-        self.valA = float(self.cfg.valA_init)
-        self.valB = float(self.cfg.valB_init)
+        # Initialize valence weights as dictionary (persist across episodes for learning)
+        self.valence = {
+            "A": float(self.cfg.valA_init),
+            "B": float(self.cfg.valB_init),
+            # Can also learn weights for novelty/trail if desired:
+            # "Novel": 0.7,    # start fixed or learn slowly
+            # "Trail": 0.6,    # repulsor weight
+        }
+        # Backwards compatibility
+        self.valA = self.valence["A"]
+        self.valB = self.valence["B"]
         self.reset()
 
-    def learn_valence(self, kind: str, reward: float):
+    def learn_valence(self, channel: str, reward: float):
         """Update valence weights based on experienced reward."""
         lr = float(self.cfg.valence_lr)
         clip = float(getattr(self.cfg, "valence_clip", 1.5))
-        if kind == "A":
-            self.valA = float(np.clip(self.valA + lr * reward, -clip, clip))
-        elif kind == "B":
-            self.valB = float(np.clip(self.valB + lr * reward, -clip, clip))
+        self.valence[channel] = float(np.clip(self.valence.get(channel, 0.0) + lr * reward, -clip, clip))
+        # Update backwards compatibility attributes
+        if channel == "A":
+            self.valA = self.valence["A"]
+        elif channel == "B":
+            self.valB = self.valence["B"]
     
     def reset(self):
         """Reset agent state for new episode."""

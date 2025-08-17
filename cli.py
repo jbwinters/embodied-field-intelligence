@@ -12,7 +12,7 @@ import numpy as np
 from efi.configs import EnvConfig, AgentConfig, SchemaConfig, Ablations
 from efi.core import set_global_seed, ts, ensure_dir
 from efi.envs import ForageWorld, register_gym_env
-from efi.agents import ChemotaxisAgentCA, SchemaField
+from efi.agents import ChemotaxisAgentCA, SchemaField, FieldController, ForageAdapter
 from efi.evaluation import run_episode, run_experiment
 from efi.visualization import save_video_mp4, plot_experiment_results
 from efi.visualization.interactive import create_interactive_viewer
@@ -21,6 +21,11 @@ from efi.visualization.html_viewer import create_html_viewer
 
 def add_common_args(parser):
     """Add common arguments to parser."""
+    # Controller selection
+    parser.add_argument("--controller", type=str, default="chemotaxis",
+                       choices=["chemotaxis", "field"],
+                       help="Controller type: chemotaxis (original) or field (generalized)")
+    
     # Environment
     parser.add_argument("--H", type=int, default=17, help="Grid height")
     parser.add_argument("--W", type=int, default=17, help="Grid width")
@@ -31,7 +36,15 @@ def add_common_args(parser):
     parser.add_argument("--max-steps", type=int, default=200, dest="max_steps", help="Max episode steps")
     parser.add_argument("--seed", type=int, default=0, help="Random seed")
     
+    # Rewards (for learning B avoidance)
+    parser.add_argument("--reward-A", type=float, default=1.0, dest="reward_A", help="Reward for collecting A")
+    parser.add_argument("--reward-B", type=float, default=-0.5, dest="reward_B", help="Reward for collecting B (negative = undesirable)")
+    
     # Agent (updated defaults to match improved config)
+    parser.add_argument("--valA-init", type=float, default=1.0, dest="valA_init", help="Initial valence for A")
+    parser.add_argument("--valB-init", type=float, default=0.1, dest="valB_init", help="Initial valence for B")
+    parser.add_argument("--valence-lr", type=float, default=0.25, dest="valence_lr", help="Valence learning rate")
+    parser.add_argument("--valence-clip", type=float, default=1.5, dest="valence_clip", help="Max absolute valence")
     parser.add_argument("--seed-strength", type=float, default=1.0, dest="seed_strength")
     parser.add_argument("--scent-diff", type=float, default=0.25, dest="scent_diff")
     parser.add_argument("--scent-decay", type=float, default=0.005, dest="scent_decay")
@@ -96,7 +109,13 @@ def run_demo(args):
     
     # Create environment and agent
     env = ForageWorld(env_cfg)
-    agent = ChemotaxisAgentCA(env, agent_cfg, ablate)
+    if hasattr(args, 'controller') and args.controller == "field":
+        print("[interactive] Using FieldController")
+        adapter = ForageAdapter(env)
+        agent = FieldController(env, adapter, agent_cfg, ablate)
+    else:
+        print("[interactive] Using ChemotaxisAgentCA")
+        agent = ChemotaxisAgentCA(env, agent_cfg, ablate)
     
     # Create schema if enabled
     schema = None
@@ -370,7 +389,13 @@ def run_interactive(args):
     
     # Create environment and agent
     env = ForageWorld(env_cfg)
-    agent = ChemotaxisAgentCA(env, agent_cfg, ablate)
+    if hasattr(args, 'controller') and args.controller == "field":
+        print("[interactive] Using FieldController")
+        adapter = ForageAdapter(env)
+        agent = FieldController(env, adapter, agent_cfg, ablate)
+    else:
+        print("[interactive] Using ChemotaxisAgentCA")
+        agent = ChemotaxisAgentCA(env, agent_cfg, ablate)
     
     # Create schema if enabled
     schema = None
@@ -393,6 +418,12 @@ def run_interactive(args):
     )
     
     print(f"[interactive] Episode complete. Return: {ret:+.3f}, Steps: {metrics.steps}")
+    if metrics.targets_collected:
+        print(f"[interactive] Targets: A={metrics.targets_collected.get('A', 0)}, B={metrics.targets_collected.get('B', 0)}")
+    if metrics.valence_snapshot:
+        print(f"[interactive] Final valences: {metrics.valence_snapshot}")
+    if metrics.mean_cosine:
+        print(f"[interactive] Gradient-motion alignment: {metrics.mean_cosine:.3f}")
     
     # Create and show interactive viewer
     if episode_data:
@@ -459,7 +490,13 @@ def run_ascii(args):
     
     # Create environment and agent
     env = ForageWorld(env_cfg)
-    agent = ChemotaxisAgentCA(env, agent_cfg, ablate)
+    if hasattr(args, 'controller') and args.controller == "field":
+        print("[interactive] Using FieldController")
+        adapter = ForageAdapter(env)
+        agent = FieldController(env, adapter, agent_cfg, ablate)
+    else:
+        print("[interactive] Using ChemotaxisAgentCA")
+        agent = ChemotaxisAgentCA(env, agent_cfg, ablate)
     
     # Run with ASCII visualization
     from efi.core import effective_potential, pick_action_from_potential, corner_hazard

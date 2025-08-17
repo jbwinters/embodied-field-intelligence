@@ -12,7 +12,8 @@ from ..core import (
     corner_hazard,
     effective_potential, 
     pick_action_from_potential,
-    set_global_seed
+    set_global_seed,
+    compose_potential
 )
 from .metrics import EpisodeMetrics, ExperimentResults
 
@@ -35,6 +36,8 @@ def run_episode(
     frames, field_frames, world_frames = [], [], []
     steps = 0
     targets_collected = {"A": 0, "B": 0}
+    cosines = []  # Track gradient-motion alignment
+    prev_yx = (env.y, env.x)
 
     for t in range(env.max_steps):
         _, fields = agent.step(obs)
@@ -52,11 +55,25 @@ def run_episode(
             Novel = Novel + frontier_weight * U
         
         # Base potential with learned valence weights
-        P_eff = effective_potential(GA, GB, Novel, Vtrail, Hc,
-                                    wA=agent.valA,           # learned attraction/repulsion for A
-                                    wB=agent.valB,           # learned attraction/repulsion for B (will go negative!)
-                                    wN=0.7,                  # novelty weight
-                                    kV=0.6, kH=0.5)          # moderate repulsion
+        # Use new compose_potential if agent has valence dict, else fall back to old method
+        if hasattr(agent, 'valence') and isinstance(agent.valence, dict):
+            # New channel-agnostic composition
+            attractors = {"A": GA, "B": GB, "Novel": Novel}
+            repulsors = {"Trail": Vtrail, "Corner": Hc}
+            w_attr = {
+                "A": agent.valence.get("A", 1.0),
+                "B": agent.valence.get("B", 1.0),
+                "Novel": 0.7
+            }
+            w_rep = {"Trail": 0.6, "Corner": 0.5}
+            P_eff = compose_potential(attractors, repulsors, w_attr, w_rep, bias=None)
+        else:
+            # Legacy method for backwards compatibility
+            P_eff = effective_potential(GA, GB, Novel, Vtrail, Hc,
+                                        wA=agent.valA,           # learned attraction/repulsion for A
+                                        wB=agent.valB,           # learned attraction/repulsion for B (will go negative!)
+                                        wN=0.7,                  # novelty weight
+                                        kV=0.6, kH=0.5)          # moderate repulsion
 
         # Schema bias (learned, slow)
         Ssum = np.zeros_like(P_eff)
@@ -64,7 +81,9 @@ def run_episode(
             feats = build_features_for_schema(GA, GB, Novel, Vtrail, Hc, P_eff)
             schema.update(feats)
             Ssum = np.sum(schema.Smaps, axis=0).astype(np.float32)
-            P_eff = P_eff + schema.bias_field()
+            schema_bias = schema.bias_field()
+            # Add schema bias (already included if using compose_potential with bias param)
+            P_eff = P_eff + schema_bias
 
         # Use trail strength as natural "stuck" signal
         # High trail means we've been here too much
@@ -90,6 +109,17 @@ def run_episode(
 
         # Step env
         obs, r, done, info = env.step(a)
+        
+        # Compute gradient-motion alignment (after step)
+        dy, dx = env.y - prev_yx[0], env.x - prev_yx[1]
+        if dy != 0 or dx != 0:  # Only if we moved
+            gy, gx = np.gradient(P_eff.astype(np.float32))
+            gvec = np.array([gy[prev_yx[0], prev_yx[1]], gx[prev_yx[0], prev_yx[1]]], dtype=np.float32)
+            dvec = np.array([dy, dx], dtype=np.float32)
+            if np.linalg.norm(gvec) > 1e-6:
+                cos = float(np.dot(gvec, dvec) / (np.linalg.norm(gvec) * np.linalg.norm(dvec)))
+                cosines.append(cos)
+        prev_yx = (env.y, env.x)
         ep_ret += r
         steps += 1
         agent.last_action = a  # Store for momentum/no-backtrack
@@ -139,11 +169,18 @@ def run_episode(
         if done:
             break
 
+    # Collect valence snapshot if available
+    valence_snapshot = {}
+    if hasattr(agent, 'valence') and isinstance(agent.valence, dict):
+        valence_snapshot = dict(agent.valence)
+    
     metrics = EpisodeMetrics(
         total_return=float(ep_ret),
         steps=steps,
         targets_collected=targets_collected,
-        efficiency=float(ep_ret)/max(1, steps)
+        efficiency=float(ep_ret)/max(1, steps),
+        mean_cosine=(float(np.mean(cosines)) if cosines else None),
+        valence_snapshot=valence_snapshot
     )
 
     episode_data = None

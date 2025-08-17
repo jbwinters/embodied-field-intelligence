@@ -9,6 +9,7 @@ from .fields import (
     effective_potential,
     pick_action_from_potential,
 )
+from .potential import compose_potential, gradient_follow
 from .utils import set_global_seed, ts, ensure_dir
 
 __all__ = [
@@ -19,6 +20,8 @@ __all__ = [
     "wall_proximity_field",
     "effective_potential",
     "pick_action_from_potential",
+    "compose_potential",
+    "gradient_follow",
     "set_global_seed",
     "ts",
     "ensure_dir",

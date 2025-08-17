@@ -1,7 +1,7 @@
 """Metrics and results tracking."""
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 
 
 @dataclass
@@ -14,6 +14,8 @@ class EpisodeMetrics:
     efficiency: float = 0.0
     seed: int = 0
     episode: int = 0
+    mean_cosine: Optional[float] = None  # Alignment between gradient and motion
+    valence_snapshot: Dict[str, float] = field(default_factory=dict)  # Current valence weights
 
 
 @dataclass
