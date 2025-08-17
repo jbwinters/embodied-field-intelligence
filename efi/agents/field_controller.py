@@ -135,8 +135,10 @@ class FieldController:
         seeds = self.adapter.seed_from_obs(obs_vec, y, x)
         
         # Update known walls and mark area as seen
-        ch = 4  # TODO: Get from adapter
-        patch = obs_vec[:ch * self.win * self.win].reshape(ch, self.win, self.win)
+        # Infer channel count from observation length (supports different adapters)
+        win = self.win
+        ch = int(len(obs_vec) // (win * win))
+        patch = obs_vec[:ch * win * win].reshape(ch, win, win)
         half = self.win // 2
         
         for dy in range(-half, half + 1):
@@ -213,7 +215,8 @@ class FieldController:
         
     def compose_P(self, walls_mask: np.ndarray,
                   corner_field: Optional[np.ndarray] = None,
-                  schema_bias: Optional[np.ndarray] = None) -> np.ndarray:
+                  schema_bias: Optional[np.ndarray] = None,
+                  frontier_weight: float = 0.0) -> np.ndarray:
         """
         Compose potential field from all influences.
         
@@ -221,15 +224,21 @@ class FieldController:
             walls_mask: Boolean mask of walls
             corner_field: Optional corner hazard field
             schema_bias: Optional schema bias field
+            frontier_weight: Weight for blending frontier into novelty
             
         Returns:
             Composed potential field
         """
+        # Optionally blend frontier into novelty (runner's behavior today)
+        novelty = self.fields["Novel"]
+        if frontier_weight != 0.0:
+            novelty = novelty + frontier_weight * self.fields["Frontier"]
+        
         # Prepare attractors and repulsors
         attractors = {
             "A": self.fields["A"],
             "B": self.fields["B"],
-            "Novel": self.fields["Novel"],
+            "Novel": novelty,
         }
         
         repulsors = {

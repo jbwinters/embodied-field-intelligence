@@ -54,10 +54,9 @@ def run_episode(
             frontier_weight = max(0.0, 0.25 * (1.0 - trail_here / 3.0))
             Novel = Novel + frontier_weight * U
         
-        # Base potential with learned valence weights
-        # Use new compose_potential if agent has valence dict, else fall back to old method
+        # --- Base potential (no schema bias yet) with learned valences ---
         if hasattr(agent, 'valence') and isinstance(agent.valence, dict):
-            # New channel-agnostic composition
+            # Channel-agnostic composition
             attractors = {"A": GA, "B": GB, "Novel": Novel}
             repulsors = {"Trail": Vtrail, "Corner": Hc}
             w_attr = {
@@ -66,24 +65,26 @@ def run_episode(
                 "Novel": 0.7
             }
             w_rep = {"Trail": 0.6, "Corner": 0.5}
-            P_eff = compose_potential(attractors, repulsors, w_attr, w_rep, bias=None)
+            P_base = compose_potential(attractors, repulsors, w_attr, w_rep, bias=None)
         else:
             # Legacy method for backwards compatibility
-            P_eff = effective_potential(GA, GB, Novel, Vtrail, Hc,
-                                        wA=agent.valA,           # learned attraction/repulsion for A
-                                        wB=agent.valB,           # learned attraction/repulsion for B (will go negative!)
-                                        wN=0.7,                  # novelty weight
-                                        kV=0.6, kH=0.5)          # moderate repulsion
+            P_base = effective_potential(GA, GB, Novel, Vtrail, Hc,
+                                        wA=agent.valA,
+                                        wB=agent.valB,
+                                        wN=0.7,
+                                        kV=0.6, kH=0.5)
 
-        # Schema bias (learned, slow)
-        Ssum = np.zeros_like(P_eff)
+        # Schema bias (learned from base potential, applied after)
+        Ssum = np.zeros_like(P_base)
+        schema_bias = None
         if schema and schema.cfg.enabled and ablate.schema:
-            feats = build_features_for_schema(GA, GB, Novel, Vtrail, Hc, P_eff)
+            feats = build_features_for_schema(GA, GB, Novel, Vtrail, Hc, P_base)
             schema.update(feats)
             Ssum = np.sum(schema.Smaps, axis=0).astype(np.float32)
             schema_bias = schema.bias_field()
-            # Add schema bias (already included if using compose_potential with bias param)
-            P_eff = P_eff + schema_bias
+        
+        # Final potential = base + (optional) schema bias
+        P_eff = P_base + (schema_bias if schema_bias is not None else 0.0)
 
         # Use trail strength as natural "stuck" signal
         # High trail means we've been here too much
@@ -201,7 +202,8 @@ def run_experiment(
     ablate: Ablations,
     episodes: int = 10,
     seeds: int = 1,
-    base_seed: int = 0
+    base_seed: int = 0,
+    use_controller: bool = False
 ) -> ExperimentResults:
     """
     Run multiple episodes across different seeds.
@@ -232,7 +234,12 @@ def run_experiment(
         
         # Create environment and agent
         env = ForageWorld(env_cfg)
-        agent = ChemotaxisAgentCA(env, agent_cfg, ablate)
+        if use_controller:
+            from ..agents import FieldController, ForageAdapter
+            adapter = ForageAdapter(env)
+            agent = FieldController(env, adapter, agent_cfg, ablate, seed=seed)
+        else:
+            agent = ChemotaxisAgentCA(env, agent_cfg, ablate)
         
         # Create schema field if configured
         schema = None

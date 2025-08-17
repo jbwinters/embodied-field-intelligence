@@ -82,32 +82,6 @@ class ChemotaxisAgentCA:
         self._pos_hist = deque(maxlen=3)
         self._pos_hist.append((self.env.y, self.env.x))
 
-    def _seed_from_patch(self, obs_vec: np.ndarray, y: int, x: int):
-        """
-        Seed scent fields from local observation patch.
-        
-        Args:
-            obs_vec: Flattened observation vector
-            y, x: Agent position
-        """
-        ch = 4
-        patch = obs_vec[:ch*self.win*self.win].reshape(ch, self.win, self.win)
-        walls_local = (patch[0] > 0.5)
-        A_local     = (patch[1] > 0.5)
-        B_local     = (patch[2] > 0.5)
-        half = self.win // 2
-        
-        for dy in range(-half, half+1):
-            for dx in range(-half, half+1):
-                gy, gx = y + dy, x + dx
-                py, px = dy + half, dx + half
-                if 0 <= gy < self.H and 0 <= gx < self.W:
-                    if walls_local[py, px]:
-                        self.known_walls[gy, gx] = True
-                    if A_local[py, px]:
-                        self.GA[gy, gx] = max(self.GA[gy, gx], self.cfg.seed_strength)
-                    if B_local[py, px]:
-                        self.GB[gy, gx] = max(self.GB[gy, gx], self.cfg.seed_strength)
 
     def step(self, obs_vec: np.ndarray) -> Tuple[int, Dict[str, np.ndarray]]:
         """

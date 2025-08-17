@@ -8,7 +8,7 @@ __version__ = "0.1.0"
 __author__ = "EFI Team"
 
 from .configs import EnvConfig, AgentConfig, SchemaConfig, Ablations
-from .agents import ChemotaxisAgentCA, SchemaField
+from .agents import ChemotaxisAgentCA, SchemaField, FieldController, ForageAdapter
 from .envs import ForageWorld
 
 __all__ = [
@@ -18,5 +18,7 @@ __all__ = [
     "Ablations",
     "ChemotaxisAgentCA",
     "SchemaField",
+    "FieldController",
+    "ForageAdapter",
     "ForageWorld",
 ]
