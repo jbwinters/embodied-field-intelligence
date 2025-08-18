@@ -238,9 +238,9 @@ If you use this code in your research, please cite:
 ```bibtex
 @software{efi2024,
   title={Embodied Field Intelligence},
-  author={EFI Team},
-  year={2024},
-  url={https://github.com/your-org/embodied-field-intelligence}
+  author={Joshua Winters},
+  year={2025},
+  url={https://github.com/jbwinters/embodied-field-intelligence}
 }
 ```
 
@@ -263,3 +263,4 @@ This project builds on research in:
 - Reservoir computing
 - Chemotaxis and stigmergy
 - Neural cellular automata (NCA)
+- Artificial General Intelligence (AGI)
