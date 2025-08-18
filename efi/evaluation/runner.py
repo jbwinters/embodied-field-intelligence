@@ -10,6 +10,7 @@ from ..envs import ForageWorld
 from ..agents import ChemotaxisAgentCA, SchemaField, build_features_for_schema
 from ..core import (
     corner_hazard,
+    wall_proximity_field,
     effective_potential, 
     pick_action_from_potential,
     set_global_seed,
@@ -31,6 +32,9 @@ def run_episode(
     agent.reset()
     walls_mask = env.walls.copy()
     Hc = corner_hazard(walls_mask) if ablate.corner else np.zeros_like(walls_mask, dtype=np.float32)
+    
+    # Add wall proximity field as additional repulsor
+    W_prox = wall_proximity_field(walls_mask, radius=1.5) if getattr(ablate, 'wall_proximity', True) else np.zeros_like(walls_mask, dtype=np.float32)
 
     ep_ret = 0.0
     frames, field_frames, world_frames = [], [], []
@@ -45,20 +49,26 @@ def run_episode(
         Vtrail = fields["Vtrail"] if ablate.trail else np.zeros_like(GA)
         Novel  = fields["Novel"]  if ablate.novelty else np.zeros_like(GA)
 
-        # Blend frontier with decay based on local trail strength
-        # High trail at current position means we've been here too much
+        # Enhanced frontier blending with trail AND uncertainty
         U = fields.get("Frontier", np.zeros_like(GA))
-        if ablate.novelty:
-            # Reduce frontier influence when trail is high (we're oscillating)
-            trail_here = Vtrail[env.y, env.x]
-            frontier_weight = max(0.0, 0.25 * (1.0 - trail_here / 3.0))
-            Novel = Novel + frontier_weight * U
-        
-        # Compute frontier weight based on trail strength at current position
         trail_here = Vtrail[env.y, env.x]
+        
+        # Compute uncertainty at current position (1 - seen)
+        seen = getattr(agent, 'seen', np.ones_like(GA))
+        uncertainty_here = 1.0 - seen[env.y, env.x]
+        
         frontier_weight = 0.0
         if ablate.novelty:
-            frontier_weight = max(0.0, 0.25 * (1.0 - trail_here / 3.0))
+            # Base weight modulated by both trail and uncertainty
+            lambda_frontier = 0.25  # Base frontier weight
+            trail_factor = max(0.0, 1.0 - trail_here / 3.0)  # Reduce when stuck
+            uncertainty_factor = uncertainty_here  # Boost in unexplored areas
+            
+            frontier_weight = lambda_frontier * trail_factor * uncertainty_factor
+            frontier_weight = np.clip(frontier_weight, 0.0, lambda_frontier)
+            
+            # Blend frontier into novelty
+            Novel = Novel + frontier_weight * U
         
         # --- Potential composition ---
         if hasattr(agent, "compose_P"):
@@ -96,7 +106,7 @@ def run_episode(
             if hasattr(agent, 'valence') and isinstance(agent.valence, dict):
                 # Channel-agnostic composition
                 attractors = {"A": GA, "B": GB, "Novel": Novel}
-                repulsors = {"Trail": Vtrail, "Corner": Hc}
+                repulsors = {"Trail": Vtrail, "Corner": Hc, "WallProx": W_prox}
                 w_attr = {
                     "A": agent.valence.get("A", 1.0),
                     "B": agent.valence.get("B", 1.0),
@@ -104,7 +114,8 @@ def run_episode(
                 }
                 w_rep = {
                     "Trail": agent.cfg.w_trail,
-                    "Corner": agent.cfg.w_corner
+                    "Corner": agent.cfg.w_corner,
+                    "WallProx": getattr(agent.cfg, "w_wall_prox", 0.3)  # Default weight for wall proximity
                 }
                 P_base = compose_potential(attractors, repulsors, w_attr, w_rep, bias=None)
             else:
@@ -128,19 +139,32 @@ def run_episode(
             # Final potential = base + (optional) schema bias
             P_eff = P_base + (schema_bias if schema_bias is not None else 0.0)
 
-        # Use trail strength as natural "stuck" signal
-        # High trail means we've been here too much
+        # Enhanced temperature schedule using trail strength AND field flatness
         trail_here = Vtrail[env.y, env.x]
+        
+        # Compute local gradient magnitude
+        gy, gx = np.gradient(P_eff.astype(np.float32))
+        grad_mag = np.sqrt(gy[env.y, env.x]**2 + gx[env.y, env.x]**2)
+        
+        # Temperature from trail (stuck signal)
         if trail_here > 2.0:  # We're oscillating/stuck
-            # Temperature based on how stuck we are
-            temp = 0.5 + (trail_here - 2.0) * 0.5
-            temp = min(temp, 2.0)  # Cap at 2.0
+            temp_trail = 0.5 + (trail_here - 2.0) * 0.5
+            temp_trail = min(temp_trail, 2.0)  # Cap at 2.0
             no_backtrack = True
             momentum = 0.0
         else:
-            temp = 0.0
+            temp_trail = 0.0
             no_backtrack = False
             momentum = 0.05
+        
+        # Temperature from field flatness (inverse gradient magnitude)
+        epsilon = 0.01  # Small constant to avoid division by zero
+        alpha_grad = 0.3  # Weight for gradient-based temperature
+        temp_flatness = alpha_grad / (epsilon + grad_mag)
+        temp_flatness = min(temp_flatness, 1.0)  # Cap contribution
+        
+        # Combined temperature
+        temp = min(temp_trail + temp_flatness, 2.5)  # Overall cap
         
         a = pick_action_from_potential(
             P_eff, env.y, env.x, walls_mask,
@@ -153,10 +177,48 @@ def run_episode(
         # Step env
         obs, r, done, info = env.step(a)
         
-        # Compute gradient-motion alignment (after step)
+        # Counterfactual valence learning (every step)
+        if hasattr(agent, 'learn_valence_counterfactual'):
+            # Compute field values at chosen action and alternatives
+            y_prev, x_prev = prev_yx
+            displacements = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # up, down, left, right
+            
+            # Get field values at the chosen action's destination
+            dy_chosen, dx_chosen = displacements[a]
+            y_chosen, x_chosen = y_prev + dy_chosen, x_prev + dx_chosen
+            if 0 <= y_chosen < env.H and 0 <= x_chosen < env.W:
+                field_at_action = {
+                    "A": GA[y_chosen, x_chosen],
+                    "B": GB[y_chosen, x_chosen],
+                    "Novel": Novel[y_chosen, x_chosen]
+                }
+            else:
+                field_at_action = {"A": 0.0, "B": 0.0, "Novel": 0.0}
+            
+            # Get average field values at alternative actions
+            alternatives = []
+            for i, (dy_alt, dx_alt) in enumerate(displacements):
+                if i != a:  # Skip the chosen action
+                    y_alt, x_alt = y_prev + dy_alt, x_prev + dx_alt
+                    if 0 <= y_alt < env.H and 0 <= x_alt < env.W and not walls_mask[y_alt, x_alt]:
+                        alternatives.append({
+                            "A": GA[y_alt, x_alt],
+                            "B": GB[y_alt, x_alt],
+                            "Novel": Novel[y_alt, x_alt]
+                        })
+            
+            if alternatives:
+                field_alternatives = {
+                    "A": np.mean([alt["A"] for alt in alternatives]),
+                    "B": np.mean([alt["B"] for alt in alternatives]),
+                    "Novel": np.mean([alt["Novel"] for alt in alternatives])
+                }
+                agent.learn_valence_counterfactual(field_at_action, field_alternatives, r)
+        
+        # Compute gradient-motion alignment (after step) - reuse gradient from temperature calc
         dy, dx = env.y - prev_yx[0], env.x - prev_yx[1]
         if dy != 0 or dx != 0:  # Only if we moved
-            gy, gx = np.gradient(P_eff.astype(np.float32))
+            # We already computed gy, gx above for temperature schedule
             gvec = np.array([gy[prev_yx[0], prev_yx[1]], gx[prev_yx[0], prev_yx[1]]], dtype=np.float32)
             dvec = np.array([dy, dx], dtype=np.float32)
             if np.linalg.norm(gvec) > 1e-6:
@@ -179,9 +241,15 @@ def run_episode(
         if picked == "A":
             targets_collected["A"] += 1
             agent.learn_valence("A", env.cfg.reward_A)
+            # Update schema valence with positive reward
+            if schema and schema.cfg.enabled:
+                schema.update_valence(env.cfg.reward_A)
         elif picked == "B":
             targets_collected["B"] += 1
             agent.learn_valence("B", env.cfg.reward_B)
+            # Update schema valence with negative reward
+            if schema and schema.cfg.enabled:
+                schema.update_valence(env.cfg.reward_B)
 
         # Optionally record frames & fields
         if record:

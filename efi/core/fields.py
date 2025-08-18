@@ -52,6 +52,53 @@ def corner_hazard(walls_mask: np.ndarray) -> np.ndarray:
     return (nn >= 2).astype(np.float32)
 
 
+def compute_reachable_frontier(seen: np.ndarray, known_walls: np.ndarray, 
+                              y: int, x: int) -> np.ndarray:
+    """
+    Compute frontier field only for reachable unseen areas.
+    
+    Uses flood-fill from current position to find connected free space,
+    then computes frontier only within that reachable region.
+    
+    Args:
+        seen: Boolean mask of seen cells
+        known_walls: Boolean mask of known walls
+        y, x: Current agent position
+        
+    Returns:
+        Reachability-aware frontier field
+    """
+    from collections import deque
+    
+    H, W = seen.shape
+    
+    # Flood-fill to find reachable area from current position
+    reachable = np.zeros_like(seen, dtype=bool)
+    visited = np.zeros_like(seen, dtype=bool)
+    queue = deque([(y, x)])
+    visited[y, x] = True
+    reachable[y, x] = True
+    
+    while queue:
+        cy, cx = queue.popleft()
+        for dy, dx in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            ny, nx = cy + dy, cx + dx
+            if (0 <= ny < H and 0 <= nx < W and 
+                not visited[ny, nx] and not known_walls[ny, nx]):
+                visited[ny, nx] = True
+                reachable[ny, nx] = True
+                queue.append((ny, nx))
+    
+    # Compute frontier only in reachable areas
+    unseen_reachable = (1.0 - seen.astype(np.float32)) * reachable.astype(np.float32)
+    
+    # Diffuse to create smooth frontier field
+    frontier = diffuse_masked(unseen_reachable, known_walls, 
+                            diff=0.15, decay=0.01, steps=3)
+    
+    return frontier
+
+
 def wall_proximity_field(walls_mask: np.ndarray, radius: float = 1.0) -> np.ndarray:
     """
     Create a repulsive field near walls to prevent wall-hugging.

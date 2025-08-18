@@ -5,7 +5,7 @@ from typing import Dict, Tuple
 import numpy as np
 
 from ..configs import AgentConfig, Ablations
-from ..core import diffuse_masked, update_visit_trail, update_novelty
+from ..core import diffuse_masked, update_visit_trail, update_novelty, compute_reachable_frontier
 
 
 class ChemotaxisAgentCA:
@@ -54,6 +54,31 @@ class ChemotaxisAgentCA:
             self.valA = self.valence["A"]
         elif channel == "B":
             self.valB = self.valence["B"]
+    
+    def learn_valence_counterfactual(self, field_values_at_action: dict, field_values_alternatives: dict, reward: float):
+        """
+        Update valence weights using counterfactual credit assignment.
+        
+        Args:
+            field_values_at_action: Field values at the chosen action location
+            field_values_alternatives: Average field values at alternative actions
+            reward: The immediate reward received
+        """
+        lr_step = float(getattr(self.cfg, "valence_lr_step", 0.001))  # Small learning rate for per-step updates
+        clip = float(getattr(self.cfg, "valence_clip", 1.5))
+        
+        for channel in ["A", "B", "Novel"]:
+            if channel in field_values_at_action and channel in field_values_alternatives:
+                # Counterfactual gradient: advantage of chosen action over alternatives
+                advantage = field_values_at_action[channel] - field_values_alternatives[channel]
+                delta = lr_step * reward * advantage
+                
+                old_val = self.valence.get(channel, 0.0)
+                self.valence[channel] = float(np.clip(old_val + delta, -clip, clip))
+        
+        # Update backwards compatibility
+        self.valA = self.valence["A"]
+        self.valB = self.valence["B"]
     
     def reset(self):
         """Reset agent state for new episode."""
@@ -159,13 +184,15 @@ class ChemotaxisAgentCA:
         else:
             self.Nv[:] = 0.0
 
-        # 5) Frontier field (unseen areas)
-        # Only consider frontiers that are reachable (not behind walls)
-        U = (~self.seen).astype(np.float32)   # 1 for unknown cells
-        # Mask out walls from frontier to prevent attraction through walls
-        U = U * (~walls_mask).astype(np.float32)
-        # Diffuse with stronger decay to keep frontier local
-        U = diffuse_masked(U, walls_mask, diff=0.15, decay=0.01, steps=3)
+        # 5) Frontier field (reachability-aware)
+        # Use flood-fill to only consider frontiers reachable from current position
+        if getattr(self.cfg, 'reachable_frontier', True):
+            U = compute_reachable_frontier(self.seen, self.known_walls, y, x)
+        else:
+            # Legacy behavior - simple unseen field
+            U = (~self.seen).astype(np.float32)   # 1 for unknown cells
+            U = U * (~walls_mask).astype(np.float32)
+            U = diffuse_masked(U, walls_mask, diff=0.15, decay=0.01, steps=3)
 
         # NOTE: we do NOT update stuck_count here; runner updates it *after* env.step()
 

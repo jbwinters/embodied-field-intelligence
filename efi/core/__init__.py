@@ -6,6 +6,7 @@ from .fields import (
     update_novelty,
     corner_hazard,
     wall_proximity_field,
+    compute_reachable_frontier,
     effective_potential,
     pick_action_from_potential,
 )
@@ -18,6 +19,7 @@ __all__ = [
     "update_novelty",
     "corner_hazard",
     "wall_proximity_field",
+    "compute_reachable_frontier",
     "effective_potential",
     "pick_action_from_potential",
     "compose_potential",
