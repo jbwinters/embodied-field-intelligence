@@ -126,8 +126,11 @@ embodied_field_intelligence/
 │   ├── evaluation/        # Experiment runners and metrics
 │   └── visualization/     # Plotting and video generation
 ├── tests/                 # Unit tests
-├── experiments/           # Experiment configs and results
-├── notebooks/             # Jupyter notebooks for analysis
+├── scripts/               # Analysis and experiment scripts
+├── docs/                  # Documentation and reports
+├── exports/               # GIF and video exports
+├── results/               # Experiment results
+├── runs/                  # Run artifacts and logs
 └── cli.py                # Command-line interface
 ```
 
