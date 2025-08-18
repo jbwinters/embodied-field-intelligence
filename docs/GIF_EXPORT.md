@@ -6,17 +6,17 @@ The EFI interactive viewer now supports exporting episodes as animated GIFs for 
 
 ### Method 1: Standalone GIF Exporter (Recommended)
 
-Use the dedicated `export_gif.py` script to create GIFs from any episode:
+Use the dedicated `scripts/export_gif.py` script to create GIFs from any episode:
 
 ```bash
 # Export both full and simple GIFs
-python export_gif.py --seed 6 --H 20 --W 20 --max-steps 200 --nA 3 --nB 3
+python scripts/export_gif.py --seed 6 --H 20 --W 20 --max-steps 200 --nA 3 --nB 3
 
 # Export only simple GIF (smaller file size, great for sharing)
-python export_gif.py --seed 6 --mode simple
+python scripts/export_gif.py --seed 6 --mode simple
 
 # Export only full GIF (shows all CA fields)
-python export_gif.py --seed 6 --mode full
+python scripts/export_gif.py --seed 6 --mode full
 ```
 
 ### Method 2: Interactive Viewer (Requires Display)
@@ -63,18 +63,18 @@ python cli.py interactive --seed 6
 
 ### Small, fast episode for testing
 ```bash
-python export_gif.py --seed 42 --H 15 --W 15 --max-steps 100 --mode simple
+python scripts/export_gif.py --seed 42 --H 15 --W 15 --max-steps 100 --mode simple
 ```
 
 ### Large, complex environment
 ```bash
-python export_gif.py --seed 6 --H 40 --W 40 --max-steps 500 --nA 20 --nB 30 --mode simple
+python scripts/export_gif.py --seed 6 --H 40 --W 40 --max-steps 500 --nA 20 --nB 30 --mode simple
 ```
 
 ### Specific scenario
 ```bash
 # Dense environment with many targets
-python export_gif.py --seed 123 --H 30 --W 30 --nA 10 --nB 15 --p-wall 0.15
+python scripts/export_gif.py --seed 123 --H 30 --W 30 --nA 10 --nB 15 --p-wall 0.15
 ```
 
 ## Tips
@@ -93,7 +93,7 @@ The standalone exporter works perfectly on headless servers:
 ssh your-server
 
 # Run episode and export
-python export_gif.py --seed 6 --mode simple
+python scripts/export_gif.py --seed 6 --mode simple
 
 # Download the GIF
 scp your-server:path/to/exports/efi_simple_*.gif ./
@@ -111,7 +111,7 @@ When using the HTML viewer (in headless mode), click the export buttons for inst
 
 ## Troubleshooting
 
-- **"No display" error**: Use the standalone `export_gif.py` script instead
+- **"No display" error**: Use the standalone `scripts/export_gif.py` script instead
 - **Large file sizes**: Use `--mode simple` for 90% smaller files
 - **Slow generation**: Reduce `--max-steps` or grid size (`--H`, `--W`)
 - **Memory issues**: Close other applications, use smaller episodes

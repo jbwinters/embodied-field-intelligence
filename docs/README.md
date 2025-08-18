@@ -35,12 +35,12 @@ To update the analysis data:
 
 1. Run the analysis script from the project root:
 ```bash
-python run_analysis.py
+python scripts/analyze_results.py
 ```
 
 2. Generate new demo GIFs:
 ```bash
-python export_gif.py --seed 42 --mode simple --output-dir docs/assets/images
+python scripts/export_gif.py --seed 42 --mode simple --output-dir docs/assets/images
 ```
 
 3. Commit and push changes
@@ -68,4 +68,4 @@ The page displays:
 - Parameter sensitivity for diffusion rates
 - Performance statistics and key findings
 
-Results are loaded from `assets/data/analysis_results.json` with fallback data if the file is unavailable.
+Results are loaded from `assets/data/experiment_summary.json` with fallback data if the file is unavailable.

@@ -88,7 +88,7 @@ docs/
     ├── js/
     │   └── main.js     # Interactive charts
     ├── data/
-    │   └── analysis_results.json  # Experimental data
+    │   └── experiment_summary.json  # Experimental data
     └── images/
         ├── efi_simple_*.gif       # Demo animations
         ├── analysis_charts.png    # Ablation/scaling plots
@@ -110,12 +110,12 @@ To update the site with new data:
 
 1. **Run new experiments**:
 ```bash
-python run_analysis.py
+python scripts/analyze_results.py
 ```
 
 2. **Generate new demo GIFs**:
 ```bash
-python export_gif.py --seed 42 --H 25 --W 25 --mode simple --output-dir docs/assets/images
+python scripts/export_gif.py --seed 42 --H 25 --W 25 --mode simple --output-dir docs/assets/images
 ```
 
 3. **Update content**: Edit `docs/index.html` directly
