@@ -5,7 +5,7 @@ from typing import Dict, Tuple
 import numpy as np
 
 from ..configs import AgentConfig, Ablations
-from ..core import diffuse_masked, update_visit_trail, update_novelty, compute_reachable_frontier
+from ..core import diffuse_masked, update_visit_trail, update_novelty, compute_reachable_frontier, wall_proximity_field
 
 
 class ChemotaxisAgentCA:
@@ -195,6 +195,9 @@ class ChemotaxisAgentCA:
             U = diffuse_masked(U, walls_mask, diff=0.15, decay=0.01, steps=3)
 
         # NOTE: we do NOT update stuck_count here; runner updates it *after* env.step()
+        
+        # Compute wall proximity for visualization
+        W_prox = wall_proximity_field(self.known_walls, radius=getattr(self.cfg, "wall_prox_radius", 1.5))
 
         fields = {
             "GA": self.GA.copy(),
@@ -203,11 +206,13 @@ class ChemotaxisAgentCA:
             "Novel": self.Nv.copy(),
             "Frontier": U.copy(),
             "known_walls": self.known_walls.copy(),
+            "WallProx": W_prox.copy(),
         }
         return -1, fields
     
     def compose_P(self, walls_mask: np.ndarray,
                   corner_field: np.ndarray = None,
+                  wall_prox_field: np.ndarray = None,
                   schema_bias: np.ndarray = None,
                   frontier_weight: float = 0.0) -> np.ndarray:
         """
@@ -237,12 +242,11 @@ class ChemotaxisAgentCA:
             "Novel": novelty,
         }
         
-        repulsors = {
-            "Trail": self.V,
-        }
-        
+        repulsors = {"Trail": self.V}
         if corner_field is not None:
             repulsors["Corner"] = corner_field
+        if wall_prox_field is not None:
+            repulsors["WallProx"] = wall_prox_field
         
         # Get weights from valence dict
         w_attr = {
@@ -254,6 +258,7 @@ class ChemotaxisAgentCA:
         w_rep = {
             "Trail": self.cfg.w_trail,
             "Corner": self.cfg.w_corner if corner_field is not None else 0.0,
+            "WallProx": getattr(self.cfg, "w_wall_prox", 0.3) if wall_prox_field is not None else 0.0,
         }
         
         # Compose

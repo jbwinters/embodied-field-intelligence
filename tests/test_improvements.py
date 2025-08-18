@@ -24,7 +24,8 @@ class TestSchemaValence:
                             cfg=SchemaConfig(K=4, tile=5))
         
         assert hasattr(schema, 'q'), "Schema should have valence array q"
-        assert schema.q.shape == (4,), "Valence array should match K prototypes"
+        # Valence is now per-tile: (ny, nx, K)
+        assert schema.q.shape == (schema.ny, schema.nx, 4), "Valence array should be per-tile"
         assert np.all(schema.q == 0), "Initial valences should be zero"
     
     def test_schema_valence_update(self):
@@ -32,32 +33,33 @@ class TestSchemaValence:
         schema = SchemaField(H=10, W=10, feature_dim=6,
                             cfg=SchemaConfig(K=4, tile=5))
         
-        # Simulate some winners
-        schema.last_winners = [0, 2]
+        # Simulate some winners (now as (iy, ix, k) tuples)
+        schema.last_winners = [(0, 0, 0), (0, 0, 2)]
         
         # Update with positive reward
         schema.update_valence(1.0)
-        assert schema.q[0] > 0, "Winner 0 should have positive valence"
-        assert schema.q[2] > 0, "Winner 2 should have positive valence"
-        assert schema.q[1] == 0, "Non-winner should have unchanged valence"
+        assert schema.q[0, 0, 0] > 0, "Winner 0 at tile (0,0) should have positive valence"
+        assert schema.q[0, 0, 2] > 0, "Winner 2 at tile (0,0) should have positive valence"
+        assert schema.q[0, 0, 1] == 0, "Non-winner should have unchanged valence"
         
         # Update with negative reward
-        schema.last_winners = [1]
+        schema.last_winners = [(0, 1, 1)]
         schema.update_valence(-0.5)
-        assert schema.q[1] < 0, "Winner 1 should have negative valence"
+        assert schema.q[0, 1, 1] < 0, "Winner 1 at tile (0,1) should have negative valence"
     
     def test_signed_bias_field(self):
         """Test that bias field reflects signed valences."""
         schema = SchemaField(H=10, W=10, feature_dim=6,
                             cfg=SchemaConfig(K=2, tile=5, alpha_schema=1.0))
         
-        # Set up contrasting valences
-        schema.q[0] = 1.0   # Positive valence
-        schema.q[1] = -1.0  # Negative valence
+        # Set up contrasting valences per-tile
+        schema.q[0, 0, 0] = 1.0   # Positive valence for tile (0,0), proto 0
+        schema.q[1, 1, 1] = -1.0  # Negative valence for tile (1,1), proto 1
         
-        # Create activation maps
-        schema.Smaps[0, 2:4, 2:4] = 1.0  # Activate prototype 0 in one area
-        schema.Smaps[1, 6:8, 6:8] = 1.0  # Activate prototype 1 in another area
+        # Create activation maps with signed deposition
+        # Note: Sign is now applied during deposition, not in bias_field
+        schema.Smaps[0, 2:4, 2:4] = np.tanh(schema.beta_valence * 1.0) * 1.0  # Positive
+        schema.Smaps[1, 6:8, 6:8] = np.tanh(schema.beta_valence * -1.0) * 1.0  # Negative
         
         bias = schema.bias_field()
         
@@ -268,17 +270,22 @@ class TestIntegration:
         env.TA[4, 18] = True  # Target at end of corridor
         env.y, env.x = 4, 1  # Start at beginning of corridor
         
-        agent = ChemotaxisAgentCA(env, AgentConfig(w_wall_prox=0.4), 
-                                 Ablations(wall_proximity=True))
+        # w_wall_prox is accessed via getattr, not a constructor param
+        cfg = AgentConfig()
+        cfg.w_wall_prox = 0.4  # Set as attribute
+        agent = ChemotaxisAgentCA(env, cfg, Ablations(wall_proximity=True))
         
         # Run a few steps
         obs = env._obs()
-        for _ in range(5):
-            _, fields = agent.step(obs)
-            # Check that wall proximity field is active
-            if 'WallProx' in fields:
-                assert np.any(fields['WallProx'] > 0), \
-                    "Wall proximity should be active in corridor"
+        # First step to discover walls in view
+        _, fields = agent.step(obs)
+        
+        # Now check wall proximity field is active after walls are discovered
+        assert 'WallProx' in fields, "WallProx should be in fields"
+        # After discovering walls in the observation window, should have proximity
+        if np.any(agent.known_walls):
+            assert np.any(fields['WallProx'] > 0), \
+                "Wall proximity should be active after discovering walls"
     
     def test_aversive_schema_learning(self):
         """Test that schema learns to avoid B-heavy areas."""

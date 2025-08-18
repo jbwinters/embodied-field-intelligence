@@ -19,3 +19,4 @@ class RunConfig:
     trail: int = 1
     corner: int = 1
     schema: int = 1
+    wall_proximity: int = 1  # Added for A4

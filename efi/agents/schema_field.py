@@ -51,8 +51,8 @@ class SchemaField:
         # Schema activation maps (global)
         self.Smaps = np.zeros((cfg.K, H, W), dtype=np.float32)
         
-        # Reward-correlated valence per prototype (for signed bias)
-        self.q = np.zeros(cfg.K, dtype=np.float32)
+        # Reward-correlated valence per tile, per prototype (for signed bias)
+        self.q = np.zeros((self.ny, self.nx, cfg.K), dtype=np.float32)
         self.beta_valence = getattr(cfg, 'beta_valence', 2.0)  # Temperature for tanh
         self.rho_valence = getattr(cfg, 'rho_valence', 0.03)  # Learning rate for valence
 
@@ -89,7 +89,7 @@ class SchemaField:
 
         ny, nx, K, d = self.ny, self.nx, self.cfg.K, self.d
         S_tmp = np.zeros((K, self.H, self.W), dtype=np.float32)
-        self.last_winners = []  # Track winners for reward updates
+        self.last_winners = []  # Track (iy, ix, k) for reward updates
 
         for iy in range(ny):
             for ix in range(nx):
@@ -102,7 +102,8 @@ class SchemaField:
                 
                 # Soft competition: choose top comp_k
                 winners = np.argsort(y)[::-1][:max(1, self.cfg.comp_k)]
-                self.last_winners.extend(winners.tolist())  # Track for reward update
+                for k in winners:
+                    self.last_winners.append((iy, ix, int(k)))  # Track for reward update
                 
                 # BCM sliding threshold
                 self.theta[iy, ix, :] = (
@@ -142,18 +143,22 @@ class SchemaField:
                     for k in range(K):
                         activation = max(0.0, y[k])
                         if activation > 0:
+                            # Apply signed valence
+                            signed = np.tanh(self.beta_valence * self.q[iy, ix, k])
                             # Apply a simple box kernel (uniform within tile)
                             # Could also use Gaussian or other kernels
                             tile_size = (y1 - y0) * (x1 - x0)
                             if tile_size > 0:
                                 # Normalize by tile size to maintain overall magnitude
-                                S_tmp[k, y0:y1, x0:x1] += activation / np.sqrt(tile_size)
+                                S_tmp[k, y0:y1, x0:x1] += signed * activation / np.sqrt(tile_size)
                 else:
                     # Legacy: deposit at tile center only
                     cy = min(self.H-1, iy*self.th + self.th//2)
                     cx = min(self.W-1, ix*self.th + self.th//2)
                     for k in range(K):
-                        S_tmp[k, cy, cx] += max(0.0, y[k])
+                        activation = max(0.0, y[k])
+                        signed = np.tanh(self.beta_valence * self.q[iy, ix, k])
+                        S_tmp[k, cy, cx] += signed * activation
 
         # Diffuse to produce smooth schema maps
         for k in range(self.cfg.K):
@@ -176,23 +181,21 @@ class SchemaField:
             return
             
         # Update valence for recent winning prototypes
-        for k in set(self.last_winners):
-            self.q[k] = (1.0 - self.rho_valence) * self.q[k] + self.rho_valence * reward
+        for (iy, ix, k) in set(self.last_winners):
+            self.q[iy, ix, k] = (1.0 - self.rho_valence) * self.q[iy, ix, k] + self.rho_valence * reward
 
     def bias_field(self) -> np.ndarray:
         """
-        Generate bias field from schema activations with signed valence.
+        Generate bias field from schema activations.
+        
+        Note: Sign is already applied during deposition, so we just sum.
         
         Returns:
-            Signed bias field to add to P_eff (can be positive or negative)
+            Bias field to add to P_eff (can be positive or negative)
         """
         if not self.cfg.enabled:
             return np.zeros((self.H, self.W), dtype=np.float32)
             
-        # Weight each schema map by its learned valence
-        bias = np.zeros((self.H, self.W), dtype=np.float32)
-        for k in range(self.cfg.K):
-            signed_weight = np.tanh(self.beta_valence * self.q[k])
-            bias += signed_weight * self.Smaps[k]
-            
-        return self.cfg.alpha_schema * bias
+        # Smaps already contain signed deposition; just sum them
+        Ssum = np.sum(self.Smaps, axis=0)
+        return self.cfg.alpha_schema * Ssum.astype(np.float32)

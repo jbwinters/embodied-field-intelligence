@@ -82,6 +82,7 @@ def run_episode(
                 P_base_for_schema = agent.compose_P(
                     walls_mask=walls_mask,
                     corner_field=Hc if ablate.corner else None,
+                    wall_prox_field=W_prox,
                     schema_bias=None,
                     frontier_weight=frontier_weight
                 )
@@ -94,6 +95,7 @@ def run_episode(
             P_eff = agent.compose_P(
                 walls_mask=walls_mask,
                 corner_field=Hc if ablate.corner else None,
+                wall_prox_field=W_prox,
                 schema_bias=schema_bias,
                 frontier_weight=frontier_weight
             )
@@ -186,7 +188,7 @@ def run_episode(
             # Get field values at the chosen action's destination
             dy_chosen, dx_chosen = displacements[a]
             y_chosen, x_chosen = y_prev + dy_chosen, x_prev + dx_chosen
-            if 0 <= y_chosen < env.H and 0 <= x_chosen < env.W:
+            if 0 <= y_chosen < env.H and 0 <= x_chosen < env.W and not walls_mask[y_chosen, x_chosen]:
                 field_at_action = {
                     "A": GA[y_chosen, x_chosen],
                     "B": GB[y_chosen, x_chosen],
@@ -213,7 +215,11 @@ def run_episode(
                     "B": np.mean([alt["B"] for alt in alternatives]),
                     "Novel": np.mean([alt["Novel"] for alt in alternatives])
                 }
-                agent.learn_valence_counterfactual(field_at_action, field_alternatives, r)
+                # Baseline reward to avoid bias from step_cost; gate on movement
+                baseline = float(getattr(agent.cfg, "valence_step_baseline", env.cfg.step_cost))
+                r_eff = r - baseline
+                if info.get("moved", True):
+                    agent.learn_valence_counterfactual(field_at_action, field_alternatives, r_eff)
         
         # Compute gradient-motion alignment (after step) - reuse gradient from temperature calc
         dy, dx = env.y - prev_yx[0], env.x - prev_yx[1]

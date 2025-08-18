@@ -12,7 +12,8 @@ def compose_potential(
     bias: Optional[np.ndarray] = None,
     mode: str = "linear",
     beta_attr: float = 1.0,
-    beta_rep: float = 1.0
+    beta_rep: float = 1.0,
+    **kwargs
 ) -> np.ndarray:
     """
     Compose a potential field from arbitrary named channels.
@@ -41,6 +42,10 @@ def compose_potential(
     else:
         raise ValueError("Must provide at least one attractor or repulsor field")
     
+    # Allow independent modes via 'mode_attr'/'mode_rep' overrides
+    mode_attr = kwargs.get("mode_attr", mode)
+    mode_rep = kwargs.get("mode_rep", mode)
+    
     # Aggregate attractors based on mode
     if attractors:
         weighted_attrs = []
@@ -50,16 +55,17 @@ def compose_potential(
                 weighted_attrs.append(weight * field.astype(np.float32))
         
         if weighted_attrs:
-            if mode == "linear":
+            if mode_attr == "linear":
                 P_attr = np.sum(weighted_attrs, axis=0)
-            elif mode == "lse":  # Log-sum-exp (soft max)
-                # LSE(z) = (1/β) * log(Σ exp(β * z_i))
-                exp_terms = [np.exp(beta_attr * wa) for wa in weighted_attrs]
-                P_attr = (1.0 / beta_attr) * np.log(np.sum(exp_terms, axis=0) + 1e-10)
-            elif mode == "maxplus":  # Max-plus algebra
+            elif mode_attr == "lse":  # Stabilized log-sum-exp
+                stack = np.stack(weighted_attrs, axis=0)
+                m = np.max(beta_attr * stack, axis=0)
+                P_attr = (m + (1.0 / beta_attr) * 
+                         np.log(np.sum(np.exp(beta_attr * stack - m[np.newaxis, :, :]), axis=0) + 1e-10))
+            elif mode_attr == "maxplus":  # Max-plus algebra
                 P_attr = np.max(weighted_attrs, axis=0)
             else:
-                raise ValueError(f"Unknown aggregation mode: {mode}")
+                raise ValueError(f"Unknown aggregation mode: {mode_attr}")
         else:
             P_attr = np.zeros(shape, dtype=np.float32)
     else:
@@ -74,15 +80,17 @@ def compose_potential(
                 weighted_reps.append(weight * field.astype(np.float32))
         
         if weighted_reps:
-            if mode == "linear":
+            if mode_rep == "linear":
                 P_rep = np.sum(weighted_reps, axis=0)
-            elif mode == "lse":  # Log-sum-exp for repulsors
-                exp_terms = [np.exp(beta_rep * wr) for wr in weighted_reps]
-                P_rep = (1.0 / beta_rep) * np.log(np.sum(exp_terms, axis=0) + 1e-10)
-            elif mode == "maxplus":  # Max-plus for strongest repulsor
+            elif mode_rep == "lse":  # Stabilized log-sum-exp for repulsors
+                stack = np.stack(weighted_reps, axis=0)
+                m = np.max(beta_rep * stack, axis=0)
+                P_rep = (m + (1.0 / beta_rep) *
+                        np.log(np.sum(np.exp(beta_rep * stack - m[np.newaxis, :, :]), axis=0) + 1e-10))
+            elif mode_rep == "maxplus":  # Max-plus for strongest repulsor
                 P_rep = np.max(weighted_reps, axis=0)
             else:
-                raise ValueError(f"Unknown aggregation mode: {mode}")
+                raise ValueError(f"Unknown aggregation mode: {mode_rep}")
         else:
             P_rep = np.zeros(shape, dtype=np.float32)
     else:
