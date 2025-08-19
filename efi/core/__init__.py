@@ -12,6 +12,21 @@ from .fields import (
 )
 from .potential import compose_potential, gradient_follow
 from .utils import set_global_seed, ts, ensure_dir
+from .affect import (
+    AffectState,
+    compute_nociception,
+    update_affect,
+    pain_to_temperature,
+    compute_learning_gate,
+    pain_field,
+)
+from .membrane import (
+    peripersonal_field,
+    brain_membrane_gate,
+    compute_membrane_potential,
+    adaptive_membrane_radius,
+    corridor_membrane,
+)
 
 __all__ = [
     "diffuse_masked",
@@ -27,4 +42,17 @@ __all__ = [
     "set_global_seed",
     "ts",
     "ensure_dir",
+    # Affect system
+    "AffectState",
+    "compute_nociception",
+    "update_affect",
+    "pain_to_temperature",
+    "compute_learning_gate",
+    "pain_field",
+    # Membrane system
+    "peripersonal_field",
+    "brain_membrane_gate",
+    "compute_membrane_potential",
+    "adaptive_membrane_radius",
+    "corridor_membrane",
 ]

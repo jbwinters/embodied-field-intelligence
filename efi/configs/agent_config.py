@@ -43,6 +43,36 @@ class AgentConfig:
     
     # Random seed
     seed: int = 0
+    
+    # Affect system parameters
+    affect_enabled: bool = True
+    affect_rho_v: float = 0.02     # Valence EWMA decay rate
+    affect_rho_a: float = 0.05     # Arousal EWMA decay rate  
+    affect_rho_c: float = 0.05     # Control EWMA decay rate
+    affect_rho_p: float = 0.1      # Pain EWMA decay rate
+    
+    # Pain parameters
+    w_pain: float = 0.7             # Pain field weight as repulsor
+    pain_to_temp_gain: float = 0.6  # Pain to temperature conversion gain
+    pain_semiring_threshold: float = 0.6  # Threshold to switch to max-plus mode
+    
+    # Nociception weights
+    pain_bump_weight: float = 0.5   # Weight for bump contribution to pain
+    pain_reward_weight: float = 0.3 # Weight for negative reward contribution
+    pain_prox_weight: float = 0.1   # Weight for wall proximity contribution
+    pain_stuck_weight: float = 0.1  # Weight for stuck contribution
+    
+    # Membrane parameters
+    membrane_enabled: bool = True
+    w_membrane: float = 0.6         # Membrane field weight
+    membrane_r_min: float = 1.0     # Minimum membrane radius
+    membrane_r_gain_arousal: float = 1.0  # Arousal contribution to radius
+    membrane_r_gain_pain: float = 1.5     # Pain contribution to radius
+    
+    # Brain membrane (learning gate) parameters
+    brain_membrane_enabled: bool = True
+    brain_membrane_suppress: float = 0.5  # Pain suppression factor for learning
+    brain_membrane_min_rate: float = 0.1  # Minimum learning rate
 
 
 @dataclass

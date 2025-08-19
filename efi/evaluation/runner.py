@@ -14,7 +14,18 @@ from ..core import (
     effective_potential, 
     pick_action_from_potential,
     set_global_seed,
-    compose_potential
+    compose_potential,
+    # Affect system
+    AffectState,
+    compute_nociception,
+    update_affect,
+    pain_to_temperature,
+    compute_learning_gate,
+    pain_field,
+    # Membrane system
+    peripersonal_field,
+    brain_membrane_gate,
+    compute_membrane_potential
 )
 from .metrics import EpisodeMetrics, ExperimentResults
 
@@ -35,6 +46,13 @@ def run_episode(
     
     # Add wall proximity field as additional repulsor
     W_prox = wall_proximity_field(walls_mask, radius=1.5) if getattr(ablate, 'wall_proximity', True) else np.zeros_like(walls_mask, dtype=np.float32)
+    
+    # Initialize affect state if enabled
+    affect_state = AffectState() if agent.cfg.affect_enabled else None
+    affect_history = []  # Track affect over time for metrics
+    bumps_total = 0
+    pain_history = []
+    wall_distances = []
 
     ep_ret = 0.0
     frames, field_frames, world_frames = [], [], []
@@ -49,6 +67,33 @@ def run_episode(
         Vtrail = fields["Vtrail"] if ablate.trail else np.zeros_like(GA)
         Novel  = fields["Novel"]  if ablate.novelty else np.zeros_like(GA)
 
+        # Compute affect fields if enabled
+        pain_field_array = np.zeros_like(GA)
+        membrane_field_array = np.zeros_like(GA)
+        
+        if affect_state and agent.cfg.affect_enabled:
+            # Compute membrane field
+            membrane_field_array = peripersonal_field(
+                agent.known_walls,
+                agent.seen,
+                env.y,
+                env.x,
+                agent.cfg.membrane_r_min,
+                affect_state.arousal,
+                affect_state.pain,
+                agent.cfg.membrane_r_gain_arousal,
+                agent.cfg.membrane_r_gain_pain
+            ) if agent.cfg.membrane_enabled else np.zeros_like(GA)
+            
+            # Compute pain field
+            pain_field_array = pain_field(
+                affect_state.pain,
+                env.y,
+                env.x,
+                env.H,
+                env.W
+            )
+        
         # Enhanced frontier blending with trail AND uncertainty
         U = fields.get("Frontier", np.zeros_like(GA))
         trail_here = Vtrail[env.y, env.x]
@@ -108,7 +153,13 @@ def run_episode(
             if hasattr(agent, 'valence') and isinstance(agent.valence, dict):
                 # Channel-agnostic composition
                 attractors = {"A": GA, "B": GB, "Novel": Novel}
-                repulsors = {"Trail": Vtrail, "Corner": Hc, "WallProx": W_prox}
+                repulsors = {
+                    "Trail": Vtrail, 
+                    "Corner": Hc, 
+                    "WallProx": W_prox,
+                    "Pain": pain_field_array,
+                    "Membrane": membrane_field_array
+                }
                 w_attr = {
                     "A": agent.valence.get("A", 1.0),
                     "B": agent.valence.get("B", 1.0),
@@ -117,7 +168,9 @@ def run_episode(
                 w_rep = {
                     "Trail": agent.cfg.w_trail,
                     "Corner": agent.cfg.w_corner,
-                    "WallProx": getattr(agent.cfg, "w_wall_prox", 0.3)  # Default weight for wall proximity
+                    "WallProx": getattr(agent.cfg, "w_wall_prox", 0.3),  # Default weight for wall proximity
+                    "Pain": agent.cfg.w_pain if affect_state else 0.0,
+                    "Membrane": agent.cfg.w_membrane if affect_state else 0.0
                 }
                 P_base = compose_potential(attractors, repulsors, w_attr, w_rep, bias=None)
             else:
@@ -167,6 +220,15 @@ def run_episode(
         
         # Combined temperature
         temp = min(temp_trail + temp_flatness, 2.5)  # Overall cap
+        
+        # Apply pain-based temperature boost if affect enabled
+        if affect_state and agent.cfg.affect_enabled:
+            temp = pain_to_temperature(
+                temp,
+                affect_state.pain,
+                affect_state.arousal,
+                agent.cfg.pain_to_temp_gain
+            )
         
         a = pick_action_from_potential(
             P_eff, env.y, env.x, walls_mask,
@@ -236,26 +298,87 @@ def run_episode(
         agent.last_action = a  # Store for momentum/no-backtrack
 
         # Update stuck counter from the truth on the ground
-        if not info.get("moved", False):
+        bump = not info.get("moved", False)
+        if bump:
             agent.stuck_count += 1
+            bumps_total += 1
         else:
             agent.stuck_count = 0
         agent.last_pos = (env.y, env.x)
+        
+        # Update affect state if enabled
+        if affect_state and agent.cfg.affect_enabled:
+            # Compute nociception
+            wall_prox_here = W_prox[env.y, env.x] if W_prox is not None else 0.0
+            neg_reward = min(0, r)  # Only negative part of reward
+            
+            nociception = compute_nociception(
+                bump,
+                neg_reward,
+                wall_prox_here,
+                agent.stuck_count,
+                agent.cfg.pain_bump_weight,
+                agent.cfg.pain_reward_weight,
+                agent.cfg.pain_prox_weight,
+                agent.cfg.pain_stuck_weight
+            )
+            
+            # Compute surprise (based on novelty)
+            surprise = Novel[env.y, env.x] if Novel is not None else 0.0
+            
+            # Update affect
+            affect_state = update_affect(
+                affect_state,
+                nociception,
+                surprise,
+                r,
+                agent.cfg.affect_rho_v,
+                agent.cfg.affect_rho_a,
+                agent.cfg.affect_rho_c,
+                agent.cfg.affect_rho_p
+            )
+            
+            # Track for metrics
+            pain_history.append(affect_state.pain)
+            affect_history.append(affect_state.to_dict())
+            
+            # Track wall distance
+            if agent.known_walls.any():
+                from scipy.ndimage import distance_transform_edt
+                dist_map = distance_transform_edt(~agent.known_walls)
+                wall_distances.append(dist_map[env.y, env.x])
 
-        # Learn from pickups
+        # Learn from pickups (with brain membrane gating if enabled)
         picked = info.get("picked")
+        learning_gate = 1.0
+        if affect_state and agent.cfg.brain_membrane_enabled:
+            learning_gate = brain_membrane_gate(
+                affect_state.pain,
+                1.0,
+                agent.cfg.brain_membrane_suppress,
+                agent.cfg.brain_membrane_min_rate
+            )
+        
         if picked == "A":
             targets_collected["A"] += 1
+            # Apply gated learning
+            orig_lr = agent.cfg.valence_lr
+            agent.cfg.valence_lr = orig_lr * learning_gate
             agent.learn_valence("A", env.cfg.reward_A)
+            agent.cfg.valence_lr = orig_lr
             # Update schema valence with positive reward
             if schema and schema.cfg.enabled:
-                schema.update_valence(env.cfg.reward_A)
+                schema.update_valence(env.cfg.reward_A * learning_gate)
         elif picked == "B":
             targets_collected["B"] += 1
+            # Apply gated learning  
+            orig_lr = agent.cfg.valence_lr
+            agent.cfg.valence_lr = orig_lr * learning_gate
             agent.learn_valence("B", env.cfg.reward_B)
+            agent.cfg.valence_lr = orig_lr
             # Update schema valence with negative reward
             if schema and schema.cfg.enabled:
-                schema.update_valence(env.cfg.reward_B)
+                schema.update_valence(env.cfg.reward_B * learning_gate)
 
         # Optionally record frames & fields
         if record:
@@ -265,7 +388,7 @@ def run_episode(
         if record_fields:
             world_rgb = env.render_rgb()
             world_frames.append(world_rgb.copy())
-            field_frames.append({
+            fields_dict = {
                 'GA': GA.copy(),
                 'GB': GB.copy(),
                 'P_eff': P_eff.copy(),
@@ -281,7 +404,18 @@ def run_episode(
                     'valA': float(agent.valA),
                     'valB': float(agent.valB)
                 }
-            })
+            }
+            
+            # Add affect fields if enabled
+            if affect_state and agent.cfg.affect_enabled:
+                fields_dict['Pain'] = pain_field_array.copy()
+                fields_dict['Membrane'] = membrane_field_array.copy()
+                fields_dict['info']['pain'] = affect_state.pain
+                fields_dict['info']['arousal'] = affect_state.arousal
+                fields_dict['info']['valence'] = affect_state.valence
+                fields_dict['info']['control'] = affect_state.control
+                
+            field_frames.append(fields_dict)
 
         if done:
             break
@@ -291,13 +425,25 @@ def run_episode(
     if hasattr(agent, 'valence') and isinstance(agent.valence, dict):
         valence_snapshot = dict(agent.valence)
     
+    # Compute safety metrics
+    bumps_per_100 = (bumps_total / max(1, steps)) * 100 if steps > 0 else 0.0
+    mean_pain = np.mean(pain_history) if pain_history else 0.0
+    max_pain = np.max(pain_history) if pain_history else 0.0
+    mean_wall_dist = np.mean(wall_distances) if wall_distances else 0.0
+    
     metrics = EpisodeMetrics(
         total_return=float(ep_ret),
         steps=steps,
         targets_collected=targets_collected,
         efficiency=float(ep_ret)/max(1, steps),
         mean_cosine=(float(np.mean(cosines)) if cosines else None),
-        valence_snapshot=valence_snapshot
+        valence_snapshot=valence_snapshot,
+        # Safety metrics
+        bumps_per_100=bumps_per_100,
+        mean_pain=mean_pain,
+        max_pain=max_pain,
+        mean_wall_distance=mean_wall_dist,
+        affect_history=affect_history
     )
 
     episode_data = None

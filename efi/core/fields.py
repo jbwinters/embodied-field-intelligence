@@ -110,18 +110,30 @@ def wall_proximity_field(walls_mask: np.ndarray, radius: float = 1.0) -> np.ndar
     Returns:
         Wall proximity penalty field (higher values near walls)
     """
+    # Create proximity by distance transform approach
+    # Start with 1.0 at non-wall cells adjacent to walls
+    H, W = walls_mask.shape
+    W_prox = np.zeros((H, W), dtype=np.float32)
+    
+    # Find cells adjacent to walls
+    for y in range(H):
+        for x in range(W):
+            if not walls_mask[y, x]:  # If not a wall
+                # Check if adjacent to any wall
+                adjacent_to_wall = False
+                for dy, dx in [(-1,0), (1,0), (0,-1), (0,1)]:
+                    ny, nx = y + dy, x + dx
+                    if 0 <= ny < H and 0 <= nx < W and walls_mask[ny, nx]:
+                        adjacent_to_wall = True
+                        break
+                if adjacent_to_wall:
+                    W_prox[y, x] = 1.0
+    
+    # Diffuse to create gradient (but not into walls)
     from .diffusion import diffuse_masked
-    
-    # Start with walls as source
-    W = walls_mask.astype(np.float32)
-    
-    # Diffuse wall presence to create proximity gradient
-    # More steps = wider repulsion zone
     steps = max(1, int(radius * 2))
-    W_prox = diffuse_masked(W, walls_mask, diff=0.25, decay=0.05, steps=steps)
-    
-    # Scale so it's strong near walls but drops off
-    W_prox = np.clip(W_prox * 2.0, 0, 1.0)
+    for _ in range(steps):
+        W_prox = diffuse_masked(W_prox, walls_mask, diff=0.25, decay=0.1, steps=1)
     
     return W_prox
 

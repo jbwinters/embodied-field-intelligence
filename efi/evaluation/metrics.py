@@ -16,6 +16,13 @@ class EpisodeMetrics:
     episode: int = 0
     mean_cosine: Optional[float] = None  # Alignment between gradient and motion
     valence_snapshot: Dict[str, float] = field(default_factory=dict)  # Current valence weights
+    
+    # Safety metrics
+    bumps_per_100: float = 0.0  # Bumps per 100 steps
+    mean_pain: float = 0.0  # Average pain level
+    max_pain: float = 0.0  # Maximum pain level
+    mean_wall_distance: float = 0.0  # Average distance to nearest wall
+    affect_history: List[Dict[str, float]] = field(default_factory=list)  # Full affect state history
 
 
 @dataclass

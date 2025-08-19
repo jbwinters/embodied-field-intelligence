@@ -65,6 +65,42 @@ def add_common_args(parser):
     parser.add_argument("--corner", type=int, default=1, choices=[0,1])
     parser.add_argument("--schema", type=int, default=1, choices=[0,1])
     
+    # Affect system parameters (Phase 1)
+    parser.add_argument("--affect-enabled", type=lambda x: x.lower() == 'true', default=False,
+                       dest="affect_enabled", help="Enable affect system (pain, arousal, valence)")
+    parser.add_argument("--membrane-enabled", type=lambda x: x.lower() == 'true', default=False,
+                       dest="membrane_enabled", help="Enable protective membrane fields")
+    parser.add_argument("--brain-membrane-enabled", type=lambda x: x.lower() == 'true', default=False,
+                       dest="brain_membrane_enabled", help="Enable learning protection under stress")
+    
+    # Pain parameters
+    parser.add_argument("--w-pain", type=float, default=0.7, dest="w_pain",
+                       help="Pain field weight as repulsor")
+    parser.add_argument("--pain-to-temp-gain", type=float, default=0.6, dest="pain_to_temp_gain",
+                       help="Pain to temperature conversion gain")
+    parser.add_argument("--pain-semiring-threshold", type=float, default=0.6, dest="pain_semiring_threshold",
+                       help="Pain threshold to switch to max-plus mode")
+    
+    # Membrane parameters
+    parser.add_argument("--w-membrane", type=float, default=0.6, dest="w_membrane",
+                       help="Membrane field weight")
+    parser.add_argument("--membrane-r-min", type=float, default=1.0, dest="membrane_r_min",
+                       help="Minimum membrane radius")
+    parser.add_argument("--membrane-r-gain-arousal", type=float, default=1.0, dest="membrane_r_gain_arousal",
+                       help="Arousal contribution to membrane radius")
+    parser.add_argument("--membrane-r-gain-pain", type=float, default=1.5, dest="membrane_r_gain_pain",
+                       help="Pain contribution to membrane radius")
+    
+    # Affect EWMA rates
+    parser.add_argument("--affect-rho-v", type=float, default=0.02, dest="affect_rho_v",
+                       help="Valence EWMA decay rate")
+    parser.add_argument("--affect-rho-a", type=float, default=0.05, dest="affect_rho_a",
+                       help="Arousal EWMA decay rate")
+    parser.add_argument("--affect-rho-c", type=float, default=0.05, dest="affect_rho_c",
+                       help="Control EWMA decay rate")
+    parser.add_argument("--affect-rho-p", type=float, default=0.1, dest="affect_rho_p",
+                       help="Pain EWMA decay rate")
+    
     # Schema
     parser.add_argument("--schema-tile", type=int, default=5, dest="schema_tile")
     parser.add_argument("--schema-K", type=int, default=4, dest="schema_K")
@@ -90,7 +126,8 @@ def run_demo(args):
     env_cfg = EnvConfig(
         H=args.H, W=args.W, win=args.win, p_wall=args.p_wall,
         n_targets_A=args.nA, n_targets_B=args.nB,
-        max_steps=args.max_steps, seed=args.seed
+        max_steps=args.max_steps, seed=args.seed,
+        reward_A=args.reward_A, reward_B=args.reward_B
     )
     
     agent_cfg = AgentConfig(
@@ -99,7 +136,25 @@ def run_demo(args):
         v_inj=args.v_inj, v_decay=args.v_decay, v_diff=args.v_diff,
         k_repulse=args.k_repulse, wander=args.wander, stay_thresh=args.stay_thresh,
         anti_stuck_after=args.anti_stuck_after, anti_stuck_temp=args.anti_stuck_temp,
-        internal_think=args.internal_think, seed=args.seed
+        internal_think=args.internal_think, seed=args.seed,
+        # Valence learning
+        valA_init=args.valA_init, valB_init=args.valB_init,
+        valence_lr=args.valence_lr, valence_clip=args.valence_clip,
+        # Affect system parameters
+        affect_enabled=args.affect_enabled,
+        membrane_enabled=args.membrane_enabled,
+        brain_membrane_enabled=args.brain_membrane_enabled,
+        w_pain=args.w_pain,
+        pain_to_temp_gain=args.pain_to_temp_gain,
+        pain_semiring_threshold=args.pain_semiring_threshold,
+        w_membrane=args.w_membrane,
+        membrane_r_min=args.membrane_r_min,
+        membrane_r_gain_arousal=args.membrane_r_gain_arousal,
+        membrane_r_gain_pain=args.membrane_r_gain_pain,
+        affect_rho_v=args.affect_rho_v,
+        affect_rho_a=args.affect_rho_a,
+        affect_rho_c=args.affect_rho_c,
+        affect_rho_p=args.affect_rho_p
     )
     
     ablate = Ablations(
@@ -171,7 +226,8 @@ def run_eval(args):
     env_cfg = EnvConfig(
         H=args.H, W=args.W, win=args.win, p_wall=args.p_wall,
         n_targets_A=args.nA, n_targets_B=args.nB,
-        max_steps=args.max_steps, seed=args.seed
+        max_steps=args.max_steps, seed=args.seed,
+        reward_A=args.reward_A, reward_B=args.reward_B
     )
     
     agent_cfg = AgentConfig(
@@ -180,7 +236,25 @@ def run_eval(args):
         v_inj=args.v_inj, v_decay=args.v_decay, v_diff=args.v_diff,
         k_repulse=args.k_repulse, wander=args.wander, stay_thresh=args.stay_thresh,
         anti_stuck_after=args.anti_stuck_after, anti_stuck_temp=args.anti_stuck_temp,
-        internal_think=args.internal_think, seed=args.seed
+        internal_think=args.internal_think, seed=args.seed,
+        # Valence learning
+        valA_init=args.valA_init, valB_init=args.valB_init,
+        valence_lr=args.valence_lr, valence_clip=args.valence_clip,
+        # Affect system parameters
+        affect_enabled=args.affect_enabled,
+        membrane_enabled=args.membrane_enabled,
+        brain_membrane_enabled=args.brain_membrane_enabled,
+        w_pain=args.w_pain,
+        pain_to_temp_gain=args.pain_to_temp_gain,
+        pain_semiring_threshold=args.pain_semiring_threshold,
+        w_membrane=args.w_membrane,
+        membrane_r_min=args.membrane_r_min,
+        membrane_r_gain_arousal=args.membrane_r_gain_arousal,
+        membrane_r_gain_pain=args.membrane_r_gain_pain,
+        affect_rho_v=args.affect_rho_v,
+        affect_rho_a=args.affect_rho_a,
+        affect_rho_c=args.affect_rho_c,
+        affect_rho_p=args.affect_rho_p
     )
     
     schema_cfg = None
@@ -259,7 +333,8 @@ def run_suite(args):
     env_cfg = EnvConfig(
         H=args.H, W=args.W, win=args.win, p_wall=args.p_wall,
         n_targets_A=args.nA, n_targets_B=args.nB,
-        max_steps=args.max_steps, seed=args.seed
+        max_steps=args.max_steps, seed=args.seed,
+        reward_A=args.reward_A, reward_B=args.reward_B
     )
     
     agent_cfg = AgentConfig(
@@ -268,7 +343,25 @@ def run_suite(args):
         v_inj=args.v_inj, v_decay=args.v_decay, v_diff=args.v_diff,
         k_repulse=args.k_repulse, wander=args.wander, stay_thresh=args.stay_thresh,
         anti_stuck_after=args.anti_stuck_after, anti_stuck_temp=args.anti_stuck_temp,
-        internal_think=args.internal_think, seed=args.seed
+        internal_think=args.internal_think, seed=args.seed,
+        # Valence learning
+        valA_init=args.valA_init, valB_init=args.valB_init,
+        valence_lr=args.valence_lr, valence_clip=args.valence_clip,
+        # Affect system parameters
+        affect_enabled=args.affect_enabled,
+        membrane_enabled=args.membrane_enabled,
+        brain_membrane_enabled=args.brain_membrane_enabled,
+        w_pain=args.w_pain,
+        pain_to_temp_gain=args.pain_to_temp_gain,
+        pain_semiring_threshold=args.pain_semiring_threshold,
+        w_membrane=args.w_membrane,
+        membrane_r_min=args.membrane_r_min,
+        membrane_r_gain_arousal=args.membrane_r_gain_arousal,
+        membrane_r_gain_pain=args.membrane_r_gain_pain,
+        affect_rho_v=args.affect_rho_v,
+        affect_rho_a=args.affect_rho_a,
+        affect_rho_c=args.affect_rho_c,
+        affect_rho_p=args.affect_rho_p
     )
     
     schema_cfg = SchemaConfig(
@@ -315,7 +408,8 @@ def run_gym_register(args):
     env_cfg = EnvConfig(
         H=args.H, W=args.W, win=args.win, p_wall=args.p_wall,
         n_targets_A=args.nA, n_targets_B=args.nB,
-        max_steps=args.max_steps, seed=args.seed
+        max_steps=args.max_steps, seed=args.seed,
+        reward_A=args.reward_A, reward_B=args.reward_B
     )
     register_gym_env(env_cfg)
 
@@ -370,7 +464,8 @@ def run_interactive(args):
     env_cfg = EnvConfig(
         H=args.H, W=args.W, win=args.win, p_wall=args.p_wall,
         n_targets_A=args.nA, n_targets_B=args.nB,
-        max_steps=args.max_steps, seed=args.seed
+        max_steps=args.max_steps, seed=args.seed,
+        reward_A=args.reward_A, reward_B=args.reward_B
     )
     
     agent_cfg = AgentConfig(
@@ -379,7 +474,25 @@ def run_interactive(args):
         v_inj=args.v_inj, v_decay=args.v_decay, v_diff=args.v_diff,
         k_repulse=args.k_repulse, wander=args.wander, stay_thresh=args.stay_thresh,
         anti_stuck_after=args.anti_stuck_after, anti_stuck_temp=args.anti_stuck_temp,
-        internal_think=args.internal_think, seed=args.seed
+        internal_think=args.internal_think, seed=args.seed,
+        # Valence learning
+        valA_init=args.valA_init, valB_init=args.valB_init,
+        valence_lr=args.valence_lr, valence_clip=args.valence_clip,
+        # Affect system parameters
+        affect_enabled=args.affect_enabled,
+        membrane_enabled=args.membrane_enabled,
+        brain_membrane_enabled=args.brain_membrane_enabled,
+        w_pain=args.w_pain,
+        pain_to_temp_gain=args.pain_to_temp_gain,
+        pain_semiring_threshold=args.pain_semiring_threshold,
+        w_membrane=args.w_membrane,
+        membrane_r_min=args.membrane_r_min,
+        membrane_r_gain_arousal=args.membrane_r_gain_arousal,
+        membrane_r_gain_pain=args.membrane_r_gain_pain,
+        affect_rho_v=args.affect_rho_v,
+        affect_rho_a=args.affect_rho_a,
+        affect_rho_c=args.affect_rho_c,
+        affect_rho_p=args.affect_rho_p
     )
     
     ablate = Ablations(
@@ -424,6 +537,23 @@ def run_interactive(args):
         print(f"[interactive] Final valences: {metrics.valence_snapshot}")
     if metrics.mean_cosine:
         print(f"[interactive] Gradient-motion alignment: {metrics.mean_cosine:.3f}")
+    
+    # Display safety metrics if affect system is enabled
+    if hasattr(args, 'affect_enabled') and args.affect_enabled:
+        print(f"[interactive] === SAFETY METRICS (Affect Enabled) ===")
+        print(f"[interactive] Bumps/100 steps: {metrics.bumps_per_100:.2f}")
+        print(f"[interactive] Mean pain: {metrics.mean_pain:.3f}")
+        print(f"[interactive] Max pain: {metrics.max_pain:.3f}")
+        print(f"[interactive] Mean wall distance: {metrics.mean_wall_distance:.2f}")
+        
+        # Display final affect state
+        if hasattr(metrics, 'affect_history') and metrics.affect_history:
+            final_affect = metrics.affect_history[-1]
+            print(f"[interactive] Final affect state:")
+            print(f"[interactive]   Valence: {final_affect['valence']:.3f}")
+            print(f"[interactive]   Arousal: {final_affect['arousal']:.3f}")
+            print(f"[interactive]   Control: {final_affect['control']:.3f}")
+            print(f"[interactive]   Pain: {final_affect['pain']:.3f}")
     
     # Create and show interactive viewer
     if episode_data:
@@ -471,7 +601,8 @@ def run_ascii(args):
     env_cfg = EnvConfig(
         H=args.H, W=args.W, win=args.win, p_wall=args.p_wall,
         n_targets_A=args.nA, n_targets_B=args.nB,
-        max_steps=args.max_steps, seed=args.seed
+        max_steps=args.max_steps, seed=args.seed,
+        reward_A=args.reward_A, reward_B=args.reward_B
     )
     
     agent_cfg = AgentConfig(
@@ -480,7 +611,25 @@ def run_ascii(args):
         v_inj=args.v_inj, v_decay=args.v_decay, v_diff=args.v_diff,
         k_repulse=args.k_repulse, wander=args.wander, stay_thresh=args.stay_thresh,
         anti_stuck_after=args.anti_stuck_after, anti_stuck_temp=args.anti_stuck_temp,
-        internal_think=args.internal_think, seed=args.seed
+        internal_think=args.internal_think, seed=args.seed,
+        # Valence learning
+        valA_init=args.valA_init, valB_init=args.valB_init,
+        valence_lr=args.valence_lr, valence_clip=args.valence_clip,
+        # Affect system parameters
+        affect_enabled=args.affect_enabled,
+        membrane_enabled=args.membrane_enabled,
+        brain_membrane_enabled=args.brain_membrane_enabled,
+        w_pain=args.w_pain,
+        pain_to_temp_gain=args.pain_to_temp_gain,
+        pain_semiring_threshold=args.pain_semiring_threshold,
+        w_membrane=args.w_membrane,
+        membrane_r_min=args.membrane_r_min,
+        membrane_r_gain_arousal=args.membrane_r_gain_arousal,
+        membrane_r_gain_pain=args.membrane_r_gain_pain,
+        affect_rho_v=args.affect_rho_v,
+        affect_rho_a=args.affect_rho_a,
+        affect_rho_c=args.affect_rho_c,
+        affect_rho_p=args.affect_rho_p
     )
     
     ablate = Ablations(

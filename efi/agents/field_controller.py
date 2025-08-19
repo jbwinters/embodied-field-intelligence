@@ -215,6 +215,7 @@ class FieldController:
         
     def compose_P(self, walls_mask: np.ndarray,
                   corner_field: Optional[np.ndarray] = None,
+                  wall_prox_field: Optional[np.ndarray] = None,
                   schema_bias: Optional[np.ndarray] = None,
                   frontier_weight: float = 0.0) -> np.ndarray:
         """
@@ -223,6 +224,7 @@ class FieldController:
         Args:
             walls_mask: Boolean mask of walls
             corner_field: Optional corner hazard field
+            wall_prox_field: Optional wall proximity field
             schema_bias: Optional schema bias field
             frontier_weight: Weight for blending frontier into novelty
             
@@ -247,6 +249,9 @@ class FieldController:
         
         if corner_field is not None:
             repulsors["Corner"] = corner_field
+        
+        if wall_prox_field is not None:
+            repulsors["WallProx"] = wall_prox_field
             
         # Get weights
         w_attr = {
@@ -258,6 +263,7 @@ class FieldController:
         w_rep = {
             "Trail": self.cfg.w_trail,
             "Corner": self.cfg.w_corner if corner_field is not None else 0.0,
+            "WallProx": getattr(self.cfg, "w_wall_prox", 0.3) if wall_prox_field is not None else 0.0,
         }
         
         # Compose potential
