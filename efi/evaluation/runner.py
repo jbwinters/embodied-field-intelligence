@@ -395,6 +395,31 @@ def run_episode(
             # Update schema valence with negative reward
             if schema and schema.cfg.enabled:
                 schema.update_valence(env.cfg.reward_B * learning_gate)
+        
+        # Recompute affect fields after state update for accurate visualization
+        if affect_state and agent.cfg.affect_enabled and record_fields:
+            # Update pain field with current pain level
+            pain_field_array = pain_field(
+                affect_state.pain,
+                env.y,
+                env.x,
+                H, W,
+                radius=2.0
+            )
+            
+            # Update membrane field with current affect state
+            if agent.cfg.membrane_enabled:
+                membrane_field_array = peripersonal_field(
+                    agent.known_walls,
+                    agent.seen,
+                    env.y,
+                    env.x,
+                    agent.cfg.membrane_r_min,
+                    arousal=affect_state.arousal,
+                    pain=affect_state.pain,
+                    R_gain_arousal=agent.cfg.membrane_r_gain_arousal,
+                    R_gain_pain=agent.cfg.membrane_r_gain_pain
+                )
 
         # Optionally record frames & fields
         if record:
@@ -430,6 +455,10 @@ def run_episode(
                 fields_dict['info']['arousal'] = affect_state.arousal
                 fields_dict['info']['valence'] = affect_state.valence
                 fields_dict['info']['control'] = affect_state.control
+                
+                # Add brain membrane info if enabled
+                if agent.cfg.brain_membrane_enabled:
+                    fields_dict['info']['learning_gate'] = learning_gate
                 
             field_frames.append(fields_dict)
 

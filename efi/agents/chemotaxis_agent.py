@@ -241,14 +241,24 @@ class ChemotaxisAgentCA:
         if frontier_weight != 0.0 and hasattr(self, 'Frontier'):
             novelty = novelty + frontier_weight * getattr(self, 'Frontier', np.zeros_like(novelty))
         
-        # Prepare fields
-        attractors = {
-            "A": self.GA,
-            "B": self.GB,
-            "Novel": novelty,
-        }
-        
+        # Prepare fields - dynamically classify based on valence
+        attractors = {}
         repulsors = {"Trail": self.V}
+        
+        # A is usually attractive (unless learned otherwise)
+        if self.valence.get("A", 1.0) >= 0:
+            attractors["A"] = self.GA
+        else:
+            repulsors["A"] = self.GA
+            
+        # B can become repulsive when learned to be negative
+        if self.valence.get("B", 1.0) >= 0:
+            attractors["B"] = self.GB
+        else:
+            repulsors["B"] = self.GB
+            
+        # Novelty is always attractive
+        attractors["Novel"] = novelty
         if corner_field is not None:
             repulsors["Corner"] = corner_field
         if wall_prox_field is not None:
@@ -259,19 +269,31 @@ class ChemotaxisAgentCA:
             repulsors["Membrane"] = membrane_field
         
         # Get weights from valence dict
-        w_attr = {
-            "A": self.valence.get("A", 1.0),
-            "B": self.valence.get("B", 1.0),
-            "Novel": self.valence.get("Novel", self.cfg.w_novel),
-        }
+        w_attr = {}
+        w_rep = {"Trail": self.cfg.w_trail}
         
-        w_rep = {
-            "Trail": self.cfg.w_trail,
-            "Corner": self.cfg.w_corner if corner_field is not None else 0.0,
-            "WallProx": getattr(self.cfg, "w_wall_prox", 0.3) if wall_prox_field is not None else 0.0,
-            "Pain": getattr(self.cfg, "w_pain", 0.7) if pain_field is not None else 0.0,
-            "Membrane": getattr(self.cfg, "w_membrane", 0.6) if membrane_field is not None else 0.0,
-        }
+        # Set weights based on classification
+        if "A" in attractors:
+            w_attr["A"] = self.valence.get("A", 1.0)
+        elif "A" in repulsors:
+            w_rep["A"] = abs(self.valence.get("A", 1.0))
+            
+        if "B" in attractors:
+            w_attr["B"] = self.valence.get("B", 1.0)
+        elif "B" in repulsors:
+            w_rep["B"] = abs(self.valence.get("B", 1.0))
+            
+        w_attr["Novel"] = self.valence.get("Novel", self.cfg.w_novel)
+        
+        # Add other repulsor weights
+        if corner_field is not None:
+            w_rep["Corner"] = self.cfg.w_corner
+        if wall_prox_field is not None:
+            w_rep["WallProx"] = getattr(self.cfg, "w_wall_prox", 0.3)
+        if pain_field is not None:
+            w_rep["Pain"] = getattr(self.cfg, "w_pain", 0.7)
+        if membrane_field is not None:
+            w_rep["Membrane"] = getattr(self.cfg, "w_membrane", 0.6)
         
         # Determine semiring mode based on pain
         mode = "linear"  # default

@@ -333,6 +333,9 @@ def create_html_viewer(episode_data: dict, output_path: str = "interactive_viewe
             if (info.arousal !== undefined) {
                 infoLines.push(`Arousal: ${info.arousal.toFixed(3)}`);
             }
+            if (info.learning_gate !== undefined) {
+                infoLines.push(`Learn Gate: ${info.learning_gate.toFixed(3)}`);
+            }
             
             document.getElementById('infoText').textContent = infoLines.join('\\n');
             

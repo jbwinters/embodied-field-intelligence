@@ -276,6 +276,8 @@ class InteractiveViewer:
             info_lines.append(f"Pain: {info.get('pain', 0.0):.3f}")
         if 'arousal' in info:
             info_lines.append(f"Arousal: {info.get('arousal', 0.0):.3f}")
+        if 'learning_gate' in info:
+            info_lines.append(f"Learn Gate: {info.get('learning_gate', 1.0):.3f}")
         self.info_text.set_text('\n'.join(info_lines))
         
         # Redraw
