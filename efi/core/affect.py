@@ -158,31 +158,6 @@ def pain_to_temperature(
     return min(new_temp, max_temp)
 
 
-def compute_learning_gate(
-    pain: float,
-    base_rate: float,
-    pain_suppress: float = 0.5,
-    min_rate: float = 0.1
-) -> float:
-    """
-    Compute learning rate gate based on pain (brain membrane).
-    
-    High pain suppresses learning to prevent maladaptive associations.
-    
-    Args:
-        pain: Current pain level (0-1)
-        base_rate: Base learning rate
-        pain_suppress: Pain suppression factor
-        min_rate: Minimum learning rate (never fully stop)
-    
-    Returns:
-        Gated learning rate
-    """
-    # Suppress learning under high pain
-    gate = max(min_rate, 1.0 - pain_suppress * pain)
-    return base_rate * gate
-
-
 def pain_field(
     pain: float,
     y: int,

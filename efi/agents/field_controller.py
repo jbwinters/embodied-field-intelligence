@@ -217,7 +217,9 @@ class FieldController:
                   corner_field: Optional[np.ndarray] = None,
                   wall_prox_field: Optional[np.ndarray] = None,
                   schema_bias: Optional[np.ndarray] = None,
-                  frontier_weight: float = 0.0) -> np.ndarray:
+                  frontier_weight: float = 0.0,
+                  pain_field: Optional[np.ndarray] = None,
+                  membrane_field: Optional[np.ndarray] = None) -> np.ndarray:
         """
         Compose potential field from all influences.
         
@@ -227,6 +229,8 @@ class FieldController:
             wall_prox_field: Optional wall proximity field
             schema_bias: Optional schema bias field
             frontier_weight: Weight for blending frontier into novelty
+            pain_field: Optional pain-based repulsive field
+            membrane_field: Optional protective membrane field
             
         Returns:
             Composed potential field
@@ -252,6 +256,12 @@ class FieldController:
         
         if wall_prox_field is not None:
             repulsors["WallProx"] = wall_prox_field
+        
+        if pain_field is not None:
+            repulsors["Pain"] = pain_field
+        
+        if membrane_field is not None:
+            repulsors["Membrane"] = membrane_field
             
         # Get weights
         w_attr = {
@@ -264,10 +274,18 @@ class FieldController:
             "Trail": self.cfg.w_trail,
             "Corner": self.cfg.w_corner if corner_field is not None else 0.0,
             "WallProx": getattr(self.cfg, "w_wall_prox", 0.3) if wall_prox_field is not None else 0.0,
+            "Pain": getattr(self.cfg, "w_pain", 0.7) if pain_field is not None else 0.0,
+            "Membrane": getattr(self.cfg, "w_membrane", 0.6) if membrane_field is not None else 0.0,
         }
         
+        # Determine semiring mode based on pain  
+        mode = "linear"  # default
+        if hasattr(self, 'affect_state') and self.affect_state is not None:
+            if self.affect_state.pain > getattr(self.cfg, 'pain_semiring_threshold', 0.6):
+                mode = "maxplus"  # Use max-plus semiring under high pain
+        
         # Compose potential
-        return compose_potential(attractors, repulsors, w_attr, w_rep, bias=schema_bias)
+        return compose_potential(attractors, repulsors, w_attr, w_rep, bias=schema_bias, mode=mode)
         
     def step(self, obs_vec: np.ndarray) -> Tuple[int, Dict[str, np.ndarray]]:
         """

@@ -84,16 +84,26 @@ def compute_reachable_frontier(seen: np.ndarray, known_walls: np.ndarray,
         for dy, dx in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
             ny, nx = cy + dy, cx + dx
             if (0 <= ny < H and 0 <= nx < W and 
-                not visited[ny, nx] and not known_walls[ny, nx]):
+                not visited[ny, nx] and not known_walls[ny, nx] and seen[ny, nx]):
+                # Only traverse through seen areas
                 visited[ny, nx] = True
                 reachable[ny, nx] = True
                 queue.append((ny, nx))
     
-    # Compute frontier only in reachable areas
-    unseen_reachable = (1.0 - seen.astype(np.float32)) * reachable.astype(np.float32)
+    # Now find frontier cells: unseen cells adjacent to reachable seen areas
+    frontier_mask = np.zeros_like(seen, dtype=np.float32)
+    for cy in range(H):
+        for cx in range(W):
+            if not seen[cy, cx] and not known_walls[cy, cx]:
+                # Check if adjacent to any reachable cell
+                for dy, dx in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                    ny, nx = cy + dy, cx + dx
+                    if (0 <= ny < H and 0 <= nx < W and reachable[ny, nx]):
+                        frontier_mask[cy, cx] = 1.0
+                        break
     
     # Diffuse to create smooth frontier field
-    frontier = diffuse_masked(unseen_reachable, known_walls, 
+    frontier = diffuse_masked(frontier_mask, known_walls, 
                             diff=0.15, decay=0.01, steps=3)
     
     return frontier

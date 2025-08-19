@@ -73,6 +73,12 @@ def create_html_viewer(episode_data: dict, output_path: str = "interactive_viewe
             'Ssum': array_to_base64_png(frame.get('Ssum', np.zeros((10,10))), cmap='cividis'),
         }
         
+        # Add affect fields if present
+        if 'Pain' in frame:
+            frame_images['Pain'] = array_to_base64_png(frame['Pain'], cmap='Reds', vmin=0, vmax=1)
+        if 'Membrane' in frame:
+            frame_images['Membrane'] = array_to_base64_png(frame['Membrane'], cmap='YlOrBr', vmin=0, vmax=1)
+        
         info = frame.get('info', {})
         frame_data.append({
             'images': frame_images,
@@ -246,6 +252,14 @@ def create_html_viewer(episode_data: dict, output_path: str = "interactive_viewe
                     Loading...
                 </div>
             </div>
+            <div class="panel" id="painPanel" style="display:none">
+                <h3>Pain Field</h3>
+                <img id="img_Pain" src="">
+            </div>
+            <div class="panel" id="membranePanel" style="display:none">
+                <h3>Membrane Field</h3>
+                <img id="img_Membrane" src="">
+            </div>
         </div>
     </div>
     
@@ -289,6 +303,16 @@ def create_html_viewer(episode_data: dict, output_path: str = "interactive_viewe
                 if (img) img.src = src;
             }
             
+            // Show/hide affect panels
+            const painPanel = document.getElementById('painPanel');
+            const membranePanel = document.getElementById('membranePanel');
+            if (frame.images.Pain) {
+                painPanel.style.display = 'block';
+            }
+            if (frame.images.Membrane) {
+                membranePanel.style.display = 'block';
+            }
+            
             // Update info
             const info = frame.info || {};
             document.getElementById('frameNum').textContent = currentFrame + 1;
@@ -301,6 +325,15 @@ def create_html_viewer(episode_data: dict, output_path: str = "interactive_viewe
                 `Reward: ${info.reward !== undefined ? info.reward.toFixed(3) : 'N/A'}`,
                 `Stuck: ${info.stuck_count || 0}`
             ];
+            
+            // Add affect info if present
+            if (info.pain !== undefined) {
+                infoLines.push(`Pain: ${info.pain.toFixed(3)}`);
+            }
+            if (info.arousal !== undefined) {
+                infoLines.push(`Arousal: ${info.arousal.toFixed(3)}`);
+            }
+            
             document.getElementById('infoText').textContent = infoLines.join('\\n');
             
             // Update slider

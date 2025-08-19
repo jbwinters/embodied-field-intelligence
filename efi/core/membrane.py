@@ -63,7 +63,7 @@ def peripersonal_field(
         yy, xx = np.meshgrid(np.arange(H), np.arange(W), indexing='ij')
         agent_dist = np.sqrt((yy - y)**2 + (xx - x)**2)
         local_boost = pain * np.exp(-0.5 * agent_dist)
-        field = np.maximum(field, local_boost * field)
+        field = field + local_boost  # Additive boost, not multiplicative
     
     return field
 

@@ -8,9 +8,9 @@ from efi.core.affect import (
     compute_nociception,
     update_affect,
     pain_to_temperature,
-    compute_learning_gate,
     pain_field
 )
+from efi.core.membrane import brain_membrane_gate
 
 
 class TestNociception:
@@ -214,10 +214,10 @@ class TestLearningGate:
     def test_pain_suppresses_learning(self):
         """High pain should suppress learning."""
         base_rate = 1.0
-        gated_rate = compute_learning_gate(
+        gated_rate = brain_membrane_gate(
             pain=0.8,
             base_rate=base_rate,
-            pain_suppress=0.5,
+            suppress_factor=0.5,
             min_rate=0.1
         )
         assert gated_rate < base_rate
@@ -226,10 +226,10 @@ class TestLearningGate:
     def test_minimum_learning_maintained(self):
         """Learning should never fully stop."""
         base_rate = 1.0
-        gated_rate = compute_learning_gate(
+        gated_rate = brain_membrane_gate(
             pain=1.0,
             base_rate=base_rate,
-            pain_suppress=1.0,
+            suppress_factor=1.0,
             min_rate=0.1
         )
         assert gated_rate == 0.1
@@ -237,10 +237,10 @@ class TestLearningGate:
     def test_no_pain_no_suppression(self):
         """No pain means no suppression."""
         base_rate = 0.5
-        gated_rate = compute_learning_gate(
+        gated_rate = brain_membrane_gate(
             pain=0,
             base_rate=base_rate,
-            pain_suppress=0.5,
+            suppress_factor=0.5,
             min_rate=0.1
         )
         assert gated_rate == base_rate

@@ -80,6 +80,10 @@ class InteractiveViewer:
         self.axes['Ssum'] = self.fig.add_subplot(gs[1, 2])
         self.axes['info'] = self.fig.add_subplot(gs[1, 3])
         
+        # Row 3 - Affect fields (if present)
+        self.axes['Pain'] = self.fig.add_subplot(gs[2, 0])
+        self.axes['Membrane'] = self.fig.add_subplot(gs[2, 1])
+        
         # Initialize images
         self._init_images()
         
@@ -144,6 +148,24 @@ class InteractiveViewer:
             ax = self.axes['Ssum']
             self.ims['Ssum'] = ax.imshow(frame.get('Ssum', np.zeros((10,10))), cmap='cividis', vmin=0)
             ax.set_title("Schema sum")
+            ax.axis('off')
+            
+            # Pain field (if present)
+            ax = self.axes['Pain']
+            if 'Pain' in frame:
+                self.ims['Pain'] = ax.imshow(frame.get('Pain', np.zeros((10,10))), cmap='Reds', vmin=0, vmax=1)
+                ax.set_title("Pain field")
+            else:
+                ax.text(0.5, 0.5, "Pain\n(not enabled)", ha='center', va='center', transform=ax.transAxes)
+            ax.axis('off')
+            
+            # Membrane field (if present)
+            ax = self.axes['Membrane']
+            if 'Membrane' in frame:
+                self.ims['Membrane'] = ax.imshow(frame.get('Membrane', np.zeros((10,10))), cmap='YlOrBr', vmin=0, vmax=1)
+                ax.set_title("Membrane field")
+            else:
+                ax.text(0.5, 0.5, "Membrane\n(not enabled)", ha='center', va='center', transform=ax.transAxes)
             ax.axis('off')
         
         # Info panel
@@ -235,7 +257,7 @@ class InteractiveViewer:
         if frame_idx < len(self.frames):
             frame = self.frames[frame_idx]
             
-            for field_name in ['GA', 'GB', 'P_eff', 'Vtrail', 'Novel', 'Ssum']:
+            for field_name in ['GA', 'GB', 'P_eff', 'Vtrail', 'Novel', 'Ssum', 'Pain', 'Membrane']:
                 if field_name in frame and field_name in self.ims:
                     self.ims[field_name].set_data(frame[field_name])
         
@@ -248,6 +270,12 @@ class InteractiveViewer:
             f"Action: {info.get('action', 'N/A')}",
             f"Stuck: {info.get('stuck_count', 0)}",
         ]
+        
+        # Add affect info if present
+        if 'pain' in info:
+            info_lines.append(f"Pain: {info.get('pain', 0.0):.3f}")
+        if 'arousal' in info:
+            info_lines.append(f"Arousal: {info.get('arousal', 0.0):.3f}")
         self.info_text.set_text('\n'.join(info_lines))
         
         # Redraw

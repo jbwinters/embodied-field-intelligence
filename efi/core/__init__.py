@@ -17,7 +17,6 @@ from .affect import (
     compute_nociception,
     update_affect,
     pain_to_temperature,
-    compute_learning_gate,
     pain_field,
 )
 from .membrane import (
@@ -47,7 +46,6 @@ __all__ = [
     "compute_nociception",
     "update_affect",
     "pain_to_temperature",
-    "compute_learning_gate",
     "pain_field",
     # Membrane system
     "peripersonal_field",

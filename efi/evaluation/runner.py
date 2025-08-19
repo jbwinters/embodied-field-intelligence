@@ -20,7 +20,6 @@ from ..core import (
     compute_nociception,
     update_affect,
     pain_to_temperature,
-    compute_learning_gate,
     pain_field,
     # Membrane system
     peripersonal_field,
@@ -118,6 +117,10 @@ def run_episode(
         # --- Potential composition ---
         if hasattr(agent, "compose_P"):
             # Agent has compose_P method - delegate to it
+            # Pass affect state to agent for semiring mode selection
+            if affect_state is not None:
+                agent.affect_state = affect_state
+            
             # First compute schema if needed
             schema_bias = None
             Ssum = np.zeros_like(GA)
@@ -129,7 +132,9 @@ def run_episode(
                     corner_field=Hc if ablate.corner else None,
                     wall_prox_field=W_prox,
                     schema_bias=None,
-                    frontier_weight=frontier_weight
+                    frontier_weight=frontier_weight,
+                    pain_field=pain_field_array if agent.cfg.affect_enabled and affect_state else None,
+                    membrane_field=membrane_field_array if agent.cfg.membrane_enabled and affect_state else None
                 )
                 feats = build_features_for_schema(GA, GB, Novel, Vtrail, Hc, P_base_for_schema)
                 schema.update(feats)
@@ -142,7 +147,9 @@ def run_episode(
                 corner_field=Hc if ablate.corner else None,
                 wall_prox_field=W_prox,
                 schema_bias=schema_bias,
-                frontier_weight=frontier_weight
+                frontier_weight=frontier_weight,
+                pain_field=pain_field_array if agent.cfg.affect_enabled and affect_state else None,
+                membrane_field=membrane_field_array if agent.cfg.membrane_enabled and affect_state else None
             )
         else:
             # Legacy path - manual composition
@@ -172,7 +179,12 @@ def run_episode(
                     "Pain": agent.cfg.w_pain if affect_state else 0.0,
                     "Membrane": agent.cfg.w_membrane if affect_state else 0.0
                 }
-                P_base = compose_potential(attractors, repulsors, w_attr, w_rep, bias=None)
+                # Determine semiring mode based on pain
+                mode = "linear"  # default
+                if affect_state is not None and affect_state.pain > getattr(agent.cfg, 'pain_semiring_threshold', 0.6):
+                    mode = "maxplus"  # Use max-plus semiring under high pain
+                
+                P_base = compose_potential(attractors, repulsors, w_attr, w_rep, bias=None, mode=mode)
             else:
                 # Legacy method for backwards compatibility
                 P_base = effective_potential(GA, GB, Novel, Vtrail, Hc,
@@ -218,8 +230,8 @@ def run_episode(
         temp_flatness = alpha_grad / (epsilon + grad_mag)
         temp_flatness = min(temp_flatness, 1.0)  # Cap contribution
         
-        # Combined temperature
-        temp = min(temp_trail + temp_flatness, 2.5)  # Overall cap
+        # Combined temperature (no cap here, will cap after pain boost)
+        temp = temp_trail + temp_flatness
         
         # Apply pain-based temperature boost if affect enabled
         if affect_state and agent.cfg.affect_enabled:
@@ -227,8 +239,12 @@ def run_episode(
                 temp,
                 affect_state.pain,
                 affect_state.arousal,
-                agent.cfg.pain_to_temp_gain
+                agent.cfg.pain_to_temp_gain,
+                max_temp=3.0  # Unified higher cap to allow pain boost
             )
+        else:
+            # Cap temperature if no pain boost
+            temp = min(temp, 2.5)
         
         a = pick_action_from_potential(
             P_eff, env.y, env.x, walls_mask,

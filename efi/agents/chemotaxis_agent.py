@@ -86,6 +86,7 @@ class ChemotaxisAgentCA:
         self.GB = np.zeros((self.H, self.W), dtype=np.float32)
         self.V  = np.zeros((self.H, self.W), dtype=np.float32)
         self.Nv = np.zeros((self.H, self.W), dtype=np.float32)
+        self.Frontier = np.zeros((self.H, self.W), dtype=np.float32)
         self.known_walls = np.zeros((self.H, self.W), dtype=bool)
         self.seen = np.zeros((self.H, self.W), dtype=bool)  # for frontier drive
         # Mark initial visible area as seen
@@ -187,12 +188,12 @@ class ChemotaxisAgentCA:
         # 5) Frontier field (reachability-aware)
         # Use flood-fill to only consider frontiers reachable from current position
         if getattr(self.cfg, 'reachable_frontier', True):
-            U = compute_reachable_frontier(self.seen, self.known_walls, y, x)
+            self.Frontier = compute_reachable_frontier(self.seen, self.known_walls, y, x)
         else:
             # Legacy behavior - simple unseen field
-            U = (~self.seen).astype(np.float32)   # 1 for unknown cells
-            U = U * (~walls_mask).astype(np.float32)
-            U = diffuse_masked(U, walls_mask, diff=0.15, decay=0.01, steps=3)
+            self.Frontier = (~self.seen).astype(np.float32)   # 1 for unknown cells
+            self.Frontier = self.Frontier * (~walls_mask).astype(np.float32)
+            self.Frontier = diffuse_masked(self.Frontier, walls_mask, diff=0.15, decay=0.01, steps=3)
 
         # NOTE: we do NOT update stuck_count here; runner updates it *after* env.step()
         
@@ -204,7 +205,7 @@ class ChemotaxisAgentCA:
             "GB": self.GB.copy(),
             "Vtrail": self.V.copy(),
             "Novel": self.Nv.copy(),
-            "Frontier": U.copy(),
+            "Frontier": self.Frontier.copy(),
             "known_walls": self.known_walls.copy(),
             "WallProx": W_prox.copy(),
         }
@@ -214,7 +215,9 @@ class ChemotaxisAgentCA:
                   corner_field: np.ndarray = None,
                   wall_prox_field: np.ndarray = None,
                   schema_bias: np.ndarray = None,
-                  frontier_weight: float = 0.0) -> np.ndarray:
+                  frontier_weight: float = 0.0,
+                  pain_field: np.ndarray = None,
+                  membrane_field: np.ndarray = None) -> np.ndarray:
         """
         Compose potential field from all influences.
         Provides same interface as FieldController for consistency.
@@ -222,8 +225,11 @@ class ChemotaxisAgentCA:
         Args:
             walls_mask: Boolean mask of walls
             corner_field: Optional corner hazard field
+            wall_prox_field: Optional wall proximity field
             schema_bias: Optional schema bias field
             frontier_weight: Weight for blending frontier into novelty
+            pain_field: Optional pain-based repulsive field
+            membrane_field: Optional protective membrane field
             
         Returns:
             Composed potential field
@@ -247,6 +253,10 @@ class ChemotaxisAgentCA:
             repulsors["Corner"] = corner_field
         if wall_prox_field is not None:
             repulsors["WallProx"] = wall_prox_field
+        if pain_field is not None:
+            repulsors["Pain"] = pain_field
+        if membrane_field is not None:
+            repulsors["Membrane"] = membrane_field
         
         # Get weights from valence dict
         w_attr = {
@@ -259,7 +269,15 @@ class ChemotaxisAgentCA:
             "Trail": self.cfg.w_trail,
             "Corner": self.cfg.w_corner if corner_field is not None else 0.0,
             "WallProx": getattr(self.cfg, "w_wall_prox", 0.3) if wall_prox_field is not None else 0.0,
+            "Pain": getattr(self.cfg, "w_pain", 0.7) if pain_field is not None else 0.0,
+            "Membrane": getattr(self.cfg, "w_membrane", 0.6) if membrane_field is not None else 0.0,
         }
         
+        # Determine semiring mode based on pain
+        mode = "linear"  # default
+        if hasattr(self, 'affect_state') and self.affect_state is not None:
+            if self.affect_state.pain > getattr(self.cfg, 'pain_semiring_threshold', 0.6):
+                mode = "maxplus"  # Use max-plus semiring under high pain
+        
         # Compose
-        return compose_potential(attractors, repulsors, w_attr, w_rep, bias=schema_bias)
+        return compose_potential(attractors, repulsors, w_attr, w_rep, bias=schema_bias, mode=mode)
