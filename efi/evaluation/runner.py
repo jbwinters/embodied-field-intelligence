@@ -403,7 +403,7 @@ def run_episode(
                 affect_state.pain,
                 env.y,
                 env.x,
-                H, W,
+                env.H, env.W,
                 radius=2.0
             )
             
