@@ -27,7 +27,8 @@ class InteractiveViewer:
                  frames: List[dict],
                  world_frames: List[np.ndarray],
                  fps: int = 8,
-                 title: str = "EFI Interactive Viewer"):
+                 title: str = "EFI Interactive Viewer",
+                 final_metrics: Optional[dict] = None):
         """
         Initialize interactive viewer.
         
@@ -42,6 +43,7 @@ class InteractiveViewer:
         self.n_frames = len(frames)
         self.fps = fps
         self.title = title
+        self.final_metrics = final_metrics or {}
         
         # State
         self.current_frame = 0
@@ -278,6 +280,19 @@ class InteractiveViewer:
             info_lines.append(f"Arousal: {info.get('arousal', 0.0):.3f}")
         if 'learning_gate' in info:
             info_lines.append(f"Learn Gate: {info.get('learning_gate', 1.0):.3f}")
+        
+        # Add final metrics on last frame
+        if frame_idx == self.n_frames - 1 and self.final_metrics:
+            info_lines.append("\n=== Final Metrics ===")
+            if 'coverage' in self.final_metrics:
+                info_lines.append(f"Coverage: {self.final_metrics['coverage']:.1%}")
+            if 'frontier_efficiency' in self.final_metrics:
+                info_lines.append(f"Frontier Eff: {self.final_metrics['frontier_efficiency']:.3f}")
+            if 'path_optimality' in self.final_metrics and self.final_metrics['path_optimality']:
+                info_lines.append(f"Path Opt: {self.final_metrics['path_optimality']:.1f}x")
+            if 'backtrack_rate' in self.final_metrics:
+                info_lines.append(f"Backtrack: {self.final_metrics['backtrack_rate']:.1%}")
+        
         self.info_text.set_text('\n'.join(info_lines))
         
         # Redraw
@@ -606,6 +621,7 @@ def create_interactive_viewer(episode_data: dict) -> InteractiveViewer:
     """
     frames = episode_data.get('frames', [])
     world_frames = episode_data.get('world_frames', [])
+    final_metrics = episode_data.get('final_metrics', {})
     
-    viewer = InteractiveViewer(frames, world_frames)
+    viewer = InteractiveViewer(frames, world_frames, final_metrics=final_metrics)
     return viewer

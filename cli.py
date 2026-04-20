@@ -285,13 +285,27 @@ def run_eval(args):
             "episode": m.episode,
             "return": m.total_return,
             "steps": m.steps,
-            "efficiency": m.efficiency
+            "efficiency": m.efficiency,
+            # NEW capability metrics
+            "coverage": m.coverage,
+            "frontier_efficiency": m.frontier_efficiency,
+            "path_optimality": m.path_optimality,
+            "backtrack_rate": m.backtrack_rate,
+            # Safety metrics
+            "bumps_per_100": m.bumps_per_100,
+            "mean_pain": m.mean_pain,
+            "max_pain": m.max_pain,
+            "mean_wall_distance": m.mean_wall_distance
         })
     
     # Save CSV
     csv_path = out_dir / "eval_returns.csv"
     with open(csv_path, "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=["seed", "episode", "return", "steps", "efficiency"])
+        w = csv.DictWriter(f, fieldnames=[
+            "seed", "episode", "return", "steps", "efficiency",
+            "coverage", "frontier_efficiency", "path_optimality", "backtrack_rate",
+            "bumps_per_100", "mean_pain", "max_pain", "mean_wall_distance"
+        ])
         w.writeheader()
         w.writerows(rows)
     
@@ -538,6 +552,14 @@ def run_interactive(args):
     if metrics.mean_cosine:
         print(f"[interactive] Gradient-motion alignment: {metrics.mean_cosine:.3f}")
     
+    # Display new capability metrics
+    print(f"[interactive] === CAPABILITY METRICS ===")
+    print(f"[interactive] Coverage: {metrics.coverage:.1%}")
+    print(f"[interactive] Frontier efficiency: {metrics.frontier_efficiency:.3f}")
+    if metrics.path_optimality:
+        print(f"[interactive] Path optimality: {metrics.path_optimality:.2f}x (vs oracle)")
+    print(f"[interactive] Backtrack rate: {metrics.backtrack_rate:.1%}")
+    
     # Display safety metrics if affect system is enabled
     if hasattr(args, 'affect_enabled') and args.affect_enabled:
         print(f"[interactive] === SAFETY METRICS (Affect Enabled) ===")
@@ -554,6 +576,24 @@ def run_interactive(args):
             print(f"[interactive]   Arousal: {final_affect['arousal']:.3f}")
             print(f"[interactive]   Control: {final_affect['control']:.3f}")
             print(f"[interactive]   Pain: {final_affect['pain']:.3f}")
+    
+    # Add metrics to episode data for viewer
+    if episode_data:
+        episode_data['final_metrics'] = {
+            'coverage': metrics.coverage,
+            'frontier_efficiency': metrics.frontier_efficiency,
+            'path_optimality': metrics.path_optimality,
+            'backtrack_rate': metrics.backtrack_rate,
+            'bumps_per_100': metrics.bumps_per_100,
+            'mean_pain': metrics.mean_pain,
+            'max_pain': metrics.max_pain,
+            'mean_wall_distance': metrics.mean_wall_distance,
+            'mean_cosine': metrics.mean_cosine,
+            'total_return': metrics.total_return,
+            'steps': metrics.steps,
+            'targets_A': metrics.targets_collected.get('A', 0),
+            'targets_B': metrics.targets_collected.get('B', 0)
+        }
     
     # Create and show interactive viewer
     if episode_data:
@@ -578,7 +618,8 @@ def run_interactive(args):
             # Fall back to HTML viewer
             print("[interactive] No display detected, creating HTML viewer...")
             out_dir = ensure_dir(args.out or "runs")
-            html_path = create_html_viewer(episode_data, out_dir / f"interactive_{ts()}.html")
+            html_path = create_html_viewer(episode_data, out_dir / f"interactive_{ts()}.html", 
+                                          final_metrics=episode_data.get('final_metrics'))
             print(f"[interactive] HTML viewer saved to: {html_path}")
             print(f"[interactive] Open this file in a web browser to interact with the episode")
             

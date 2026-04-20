@@ -27,6 +27,12 @@ from ..core import (
     compute_membrane_potential
 )
 from .metrics import EpisodeMetrics, ExperimentResults
+from .analysis import (
+    compute_coverage,
+    compute_frontier_efficiency,
+    compute_backtrack_rate,
+    compute_path_optimality,
+)
 
 
 def run_episode(
@@ -59,6 +65,15 @@ def run_episode(
     targets_collected = {"A": 0, "B": 0}
     cosines = []  # Track gradient-motion alignment
     prev_yx = (env.y, env.x)
+    
+    # --- NEW tracking for enhanced metrics ---
+    visited_mask = np.zeros_like(env.walls, dtype=bool)
+    visited_mask[env.y, env.x] = True
+    new_cells_per_step: List[int] = []
+    novelty_at_steps: List[float] = []
+    motion_hist: List[Tuple[int, int]] = []     # only successful moves
+    pickup_positions: List[Tuple[int, int]] = []
+    start_pos = (env.y, env.x)
 
     for t in range(env.max_steps):
         _, fields = agent.step(obs)
@@ -257,6 +272,29 @@ def run_episode(
         # Step env
         obs, r, done, info = env.step(a)
         
+        # --- NEW tracking logic after step ---
+        # Track movement (for coverage & backtrack)
+        y_prev, x_prev = prev_yx
+        moved = info.get("moved", False)
+        if moved:
+            dy_move, dx_move = env.y - y_prev, env.x - x_prev
+            motion_hist.append((int(dy_move), int(dx_move)))
+        
+        # Track visited cells & discovery
+        pre = int(visited_mask.sum())
+        visited_mask[env.y, env.x] = True
+        post = int(visited_mask.sum())
+        new_cells_per_step.append(max(0, post - pre))
+        
+        # Track novelty at this step for frontier efficiency
+        nov_here = float(Novel[env.y, env.x]) if Novel is not None else 0.0
+        novelty_at_steps.append(nov_here)
+        
+        # Track pickup locations (order matters)
+        picked = info.get("picked")
+        if picked in ("A", "B"):
+            pickup_positions.append((env.y, env.x))
+        
         # Counterfactual valence learning (every step)
         if hasattr(agent, 'learn_valence_counterfactual'):
             # Compute field values at chosen action and alternatives
@@ -365,7 +403,7 @@ def run_episode(
                 wall_distances.append(dist_map[env.y, env.x])
 
         # Learn from pickups (with brain membrane gating if enabled)
-        picked = info.get("picked")
+        # (picked already extracted above for tracking)
         learning_gate = 1.0
         if affect_state and agent.cfg.brain_membrane_enabled:
             learning_gate = brain_membrane_gate(
@@ -476,6 +514,12 @@ def run_episode(
     max_pain = np.max(pain_history) if pain_history else 0.0
     mean_wall_dist = np.mean(wall_distances) if wall_distances else 0.0
     
+    # --- Compute new metrics ---
+    coverage = compute_coverage(visited_mask & (~env.walls), env.walls)
+    frontier_eff = compute_frontier_efficiency(new_cells_per_step, novelty_at_steps, novelty_thresh=0.6)
+    backtrack = compute_backtrack_rate(motion_hist)
+    path_opt = compute_path_optimality(env.walls, start_pos, pickup_positions, steps)
+    
     metrics = EpisodeMetrics(
         total_return=float(ep_ret),
         steps=steps,
@@ -488,7 +532,12 @@ def run_episode(
         mean_pain=mean_pain,
         max_pain=max_pain,
         mean_wall_distance=mean_wall_dist,
-        affect_history=affect_history
+        affect_history=affect_history,
+        # NEW capability metrics
+        coverage=coverage,
+        frontier_efficiency=frontier_eff,
+        path_optimality=path_opt,
+        backtrack_rate=backtrack
     )
 
     episode_data = None

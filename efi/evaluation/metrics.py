@@ -23,6 +23,12 @@ class EpisodeMetrics:
     max_pain: float = 0.0  # Maximum pain level
     mean_wall_distance: float = 0.0  # Average distance to nearest wall
     affect_history: List[Dict[str, float]] = field(default_factory=list)  # Full affect state history
+    
+    # --- NEW capability/behavior metrics ---
+    coverage: float = 0.0                # % of *unique visited* free cells
+    frontier_efficiency: float = 0.0     # new cells discovered per step when novelty is high
+    path_optimality: Optional[float] = None  # steps / oracle shortest route to visited pickup sequence
+    backtrack_rate: float = 0.0          # fraction of moves that immediately reverse the previous move
 
 
 @dataclass

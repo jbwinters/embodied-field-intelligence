@@ -35,7 +35,7 @@ def array_to_base64_png(array: np.ndarray, cmap: str = None, vmin: float = None,
     return f"data:image/png;base64,{img_str}"
 
 
-def create_html_viewer(episode_data: dict, output_path: str = "interactive_viewer.html") -> str:
+def create_html_viewer(episode_data: dict, output_path: str = "interactive_viewer.html", final_metrics: dict = None) -> str:
     """
     Create an HTML interactive viewer from episode data.
     
@@ -266,6 +266,7 @@ def create_html_viewer(episode_data: dict, output_path: str = "interactive_viewe
     <script>
         // Frame data embedded
         const frameData = ''' + json.dumps(frame_data) + ''';
+        window.finalMetrics = ''' + json.dumps(final_metrics or {}) + ''';
         
         let currentFrame = 0;
         let playing = false;
@@ -335,6 +336,24 @@ def create_html_viewer(episode_data: dict, output_path: str = "interactive_viewe
             }
             if (info.learning_gate !== undefined) {
                 infoLines.push(`Learn Gate: ${info.learning_gate.toFixed(3)}`);
+            }
+            
+            // Add final metrics on last frame
+            if (currentFrame === frameData.length - 1 && window.finalMetrics) {
+                infoLines.push('');
+                infoLines.push('=== Final Metrics ===');
+                if (window.finalMetrics.coverage !== undefined) {
+                    infoLines.push(`Coverage: ${(window.finalMetrics.coverage * 100).toFixed(1)}%`);
+                }
+                if (window.finalMetrics.frontier_efficiency !== undefined) {
+                    infoLines.push(`Frontier Eff: ${window.finalMetrics.frontier_efficiency.toFixed(3)}`);
+                }
+                if (window.finalMetrics.path_optimality) {
+                    infoLines.push(`Path Opt: ${window.finalMetrics.path_optimality.toFixed(1)}x`);
+                }
+                if (window.finalMetrics.backtrack_rate !== undefined) {
+                    infoLines.push(`Backtrack: ${(window.finalMetrics.backtrack_rate * 100).toFixed(1)}%`);
+                }
             }
             
             document.getElementById('infoText').textContent = infoLines.join('\\n');
