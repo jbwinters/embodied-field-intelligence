@@ -59,7 +59,7 @@ git push origin main
 ### Step 3: Access Your Site
 After a few minutes, your site will be live at:
 ```
-https://[your-username].github.io/embodied_field_intelligence/
+https://jbwinters.github.io/embodied-field-intelligence/
 ```
 
 ## 🛠️ Local Testing

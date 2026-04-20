@@ -126,7 +126,7 @@ embodied_field_intelligence/
 │   ├── evaluation/        # Experiment runners and metrics
 │   └── visualization/     # Plotting and video generation
 ├── tests/                 # Unit tests
-├── scripts/               # Analysis and experiment scripts
+├── scripts/               # Public analysis and demo utilities
 ├── docs/                  # Documentation and reports
 ├── exports/               # GIF and video exports
 ├── results/               # Experiment results

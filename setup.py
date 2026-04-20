@@ -12,7 +12,7 @@ setup(
     description="CA-based framework for embodied artificial intelligence",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/your-org/embodied-field-intelligence",
+    url="https://github.com/jbwinters/embodied-field-intelligence",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 3 - Alpha",

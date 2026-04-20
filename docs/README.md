@@ -7,7 +7,7 @@ This is the GitHub Pages site for the Embodied Field Intelligence research proje
 ### Online
 Once pushed to GitHub and GitHub Pages is enabled, the site will be available at:
 ```
-https://[your-username].github.io/embodied_field_intelligence/
+https://jbwinters.github.io/embodied-field-intelligence/
 ```
 
 ### Local Development
@@ -31,19 +31,24 @@ python -m http.server 8000
 
 ## Data Updates
 
-To update the analysis data:
+To update the site artifacts:
 
-1. Run the analysis script from the project root:
+1. Regenerate analysis data from the project root:
+```bash
+python scripts/run_analysis.py
+```
+
+2. Refresh the charts from the generated data:
 ```bash
 python scripts/analyze_results.py
 ```
 
-2. Generate new demo GIFs:
+3. Generate new demo GIFs:
 ```bash
 python scripts/export_gif.py --seed 42 --mode simple --output-dir docs/assets/images
 ```
 
-3. Commit and push changes
+4. Commit and push changes
 
 ## Enabling GitHub Pages
 

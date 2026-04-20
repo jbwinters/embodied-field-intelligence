@@ -89,7 +89,7 @@ This report presents comprehensive experimental results for the Embodied Field I
 
 ## Visualization Gallery
 
-The following visualizations are available on the [GitHub Pages site](https://yourusername.github.io/embodied_field_intelligence/):
+The following visualizations are available on the [GitHub Pages site](https://jbwinters.github.io/embodied-field-intelligence/):
 
 1. **Ablation Results**: Component contribution analysis
 2. **Scaling Analysis**: Performance across environment sizes

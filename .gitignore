@@ -78,5 +78,16 @@ docs/build/
 tmp/
 temp/
 *.tmp
+
 # Local background chat logs
 background_texts/conversation*.txt
+
+# Internal background notes and local scratch scripts
+background_texts/
+scripts/debug_*.py
+scripts/simple_*.py
+scripts/test_*.py
+scripts/wall_hug_test.py
+scripts/cli_field.py
+scripts/comprehensive_analysis.py
+scripts/analyze_field_controller.py
