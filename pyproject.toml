@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=77.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,7 +8,8 @@ version = "0.1.0"
 description = "CA-based framework for embodied artificial intelligence"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "MIT"}
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     {name = "Joshua Winters"},
 ]
@@ -16,7 +17,6 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
 ]
 
@@ -42,6 +42,9 @@ viz = ["ffmpeg-python>=0.2.0"]
 
 [project.scripts]
 efi = "efi.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["efi*"]
 
 [tool.black]
 line-length = 100
