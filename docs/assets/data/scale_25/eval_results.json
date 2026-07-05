@@ -1,0 +1,346 @@
+{
+  "config": {
+    "env": {
+      "H": 25,
+      "W": 25,
+      "win": 5,
+      "p_wall": 0.12,
+      "n_targets_A": 5,
+      "n_targets_B": 5,
+      "max_steps": 250,
+      "step_cost": -0.01,
+      "bump_pen": -0.02,
+      "reward_A": 1.0,
+      "reward_B": -0.8,
+      "seed": 1
+    },
+    "agent": {
+      "seed_strength": 1.0,
+      "scent_diff": 0.25,
+      "scent_decay": 0.005,
+      "scent_steps": 4,
+      "v_inj": 1.0,
+      "v_decay": 0.02,
+      "v_diff": 0.08,
+      "k_repulse": 0.3,
+      "wander": 0.0,
+      "stay_thresh": 0.02,
+      "anti_stuck_after": 2,
+      "anti_stuck_temp": 0.8,
+      "internal_think": 0,
+      "valA_init": 0.1,
+      "valB_init": 0.1,
+      "valence_lr": 0.25,
+      "valence_clip": 1.5,
+      "seed": 1
+    },
+    "schema": {
+      "enabled": 1,
+      "tile": 5,
+      "K": 4,
+      "eta": 0.03,
+      "slowness": 0.02,
+      "bcm_tau": 0.01,
+      "comp_k": 1,
+      "diff": 0.08,
+      "decay": 0.005,
+      "steps": 1,
+      "alpha_schema": 0.35,
+      "seed": 1
+    },
+    "ablations": {
+      "trail": 1,
+      "novelty": 1,
+      "corner": 1,
+      "schema": 1
+    }
+  },
+  "metrics": [
+    {
+      "seed": 0,
+      "episode": 0,
+      "return": -2.4999999999999907,
+      "steps": 250,
+      "efficiency": -0.009999999999999962
+    },
+    {
+      "seed": 0,
+      "episode": 1,
+      "return": 0.8999999999999981,
+      "steps": 250,
+      "efficiency": 0.0035999999999999925
+    },
+    {
+      "seed": 0,
+      "episode": 2,
+      "return": 0.49999999999999867,
+      "steps": 250,
+      "efficiency": 0.001999999999999995
+    },
+    {
+      "seed": 0,
+      "episode": 3,
+      "return": 1.5000000000000204,
+      "steps": 250,
+      "efficiency": 0.006000000000000082
+    },
+    {
+      "seed": 0,
+      "episode": 4,
+      "return": 0.499999999999998,
+      "steps": 250,
+      "efficiency": 0.001999999999999992
+    },
+    {
+      "seed": 0,
+      "episode": 5,
+      "return": 2.500000000000041,
+      "steps": 250,
+      "efficiency": 0.010000000000000163
+    },
+    {
+      "seed": 0,
+      "episode": 6,
+      "return": 1.7000000000000042,
+      "steps": 250,
+      "efficiency": 0.006800000000000017
+    },
+    {
+      "seed": 0,
+      "episode": 7,
+      "return": 0.4999999999999978,
+      "steps": 250,
+      "efficiency": 0.001999999999999991
+    },
+    {
+      "seed": 0,
+      "episode": 8,
+      "return": 1.5000000000000298,
+      "steps": 250,
+      "efficiency": 0.006000000000000119
+    },
+    {
+      "seed": 0,
+      "episode": 9,
+      "return": 0.5000000000000013,
+      "steps": 250,
+      "efficiency": 0.0020000000000000052
+    },
+    {
+      "seed": 0,
+      "episode": 10,
+      "return": 2.500000000000039,
+      "steps": 250,
+      "efficiency": 0.010000000000000156
+    },
+    {
+      "seed": 0,
+      "episode": 11,
+      "return": 0.5,
+      "steps": 250,
+      "efficiency": 0.002
+    },
+    {
+      "seed": 0,
+      "episode": 12,
+      "return": 0.500000000000008,
+      "steps": 250,
+      "efficiency": 0.002000000000000032
+    },
+    {
+      "seed": 0,
+      "episode": 13,
+      "return": 1.5000000000000147,
+      "steps": 250,
+      "efficiency": 0.006000000000000058
+    },
+    {
+      "seed": 0,
+      "episode": 14,
+      "return": 1.5000000000000258,
+      "steps": 250,
+      "efficiency": 0.006000000000000103
+    },
+    {
+      "seed": 0,
+      "episode": 15,
+      "return": 0.5000000000000031,
+      "steps": 250,
+      "efficiency": 0.0020000000000000126
+    },
+    {
+      "seed": 0,
+      "episode": 16,
+      "return": 1.5000000000000235,
+      "steps": 250,
+      "efficiency": 0.006000000000000094
+    },
+    {
+      "seed": 0,
+      "episode": 17,
+      "return": 2.5000000000000036,
+      "steps": 250,
+      "efficiency": 0.010000000000000014
+    },
+    {
+      "seed": 0,
+      "episode": 18,
+      "return": -0.5000000000000014,
+      "steps": 250,
+      "efficiency": -0.0020000000000000057
+    },
+    {
+      "seed": 0,
+      "episode": 19,
+      "return": 1.7000000000000002,
+      "steps": 250,
+      "efficiency": 0.0068000000000000005
+    },
+    {
+      "seed": 1,
+      "episode": 0,
+      "return": -2.4999999999999907,
+      "steps": 250,
+      "efficiency": -0.009999999999999962
+    },
+    {
+      "seed": 1,
+      "episode": 1,
+      "return": -1.1000000000000019,
+      "steps": 250,
+      "efficiency": -0.004400000000000007
+    },
+    {
+      "seed": 1,
+      "episode": 2,
+      "return": 2.500000000000039,
+      "steps": 250,
+      "efficiency": 0.010000000000000156
+    },
+    {
+      "seed": 1,
+      "episode": 3,
+      "return": 0.699999999999998,
+      "steps": 250,
+      "efficiency": 0.0027999999999999917
+    },
+    {
+      "seed": 1,
+      "episode": 4,
+      "return": 2.500000000000038,
+      "steps": 250,
+      "efficiency": 0.010000000000000153
+    },
+    {
+      "seed": 1,
+      "episode": 5,
+      "return": 1.5000000000000138,
+      "steps": 250,
+      "efficiency": 0.006000000000000055
+    },
+    {
+      "seed": 1,
+      "episode": 6,
+      "return": 1.5000000000000315,
+      "steps": 250,
+      "efficiency": 0.006000000000000126
+    },
+    {
+      "seed": 1,
+      "episode": 7,
+      "return": -0.30000000000000165,
+      "steps": 250,
+      "efficiency": -0.0012000000000000066
+    },
+    {
+      "seed": 1,
+      "episode": 8,
+      "return": 0.49999999999999956,
+      "steps": 250,
+      "efficiency": 0.0019999999999999983
+    },
+    {
+      "seed": 1,
+      "episode": 9,
+      "return": 0.699999999999998,
+      "steps": 250,
+      "efficiency": 0.0027999999999999917
+    },
+    {
+      "seed": 1,
+      "episode": 10,
+      "return": 0.5000000000000164,
+      "steps": 250,
+      "efficiency": 0.0020000000000000655
+    },
+    {
+      "seed": 1,
+      "episode": 11,
+      "return": 2.4999999999999987,
+      "steps": 250,
+      "efficiency": 0.009999999999999995
+    },
+    {
+      "seed": 1,
+      "episode": 12,
+      "return": -1.5000000000000018,
+      "steps": 250,
+      "efficiency": -0.006000000000000007
+    },
+    {
+      "seed": 1,
+      "episode": 13,
+      "return": 0.4999999999999982,
+      "steps": 250,
+      "efficiency": 0.001999999999999993
+    },
+    {
+      "seed": 1,
+      "episode": 14,
+      "return": -0.3000000000000018,
+      "steps": 250,
+      "efficiency": -0.0012000000000000073
+    },
+    {
+      "seed": 1,
+      "episode": 15,
+      "return": 2.500000000000046,
+      "steps": 250,
+      "efficiency": 0.010000000000000184
+    },
+    {
+      "seed": 1,
+      "episode": 16,
+      "return": 1.499999999999998,
+      "steps": 250,
+      "efficiency": 0.005999999999999992
+    },
+    {
+      "seed": 1,
+      "episode": 17,
+      "return": 2.5000000000000444,
+      "steps": 250,
+      "efficiency": 0.010000000000000177
+    },
+    {
+      "seed": 1,
+      "episode": 18,
+      "return": 0.4999999999999982,
+      "steps": 250,
+      "efficiency": 0.001999999999999993
+    },
+    {
+      "seed": 1,
+      "episode": 19,
+      "return": -1.5000000000000018,
+      "steps": 250,
+      "efficiency": -0.006000000000000007
+    }
+  ],
+  "summary": {
+    "mean_return": 0.8250000000000106,
+    "std_return": 1.3203692665311564,
+    "mean_steps": 250.0,
+    "std_steps": 0.0
+  }
+}
