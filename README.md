@@ -1,22 +1,32 @@
 # Embodied Field Intelligence (EFI)
 
+[![CI](https://github.com/jbwinters/embodied-field-intelligence/actions/workflows/ci.yml/badge.svg)](https://github.com/jbwinters/embodied-field-intelligence/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](pyproject.toml)
+
 A CA-based framework for embodied artificial intelligence using cellular automata, chemotaxis fields, and schema learning.
+
+![EFI agent foraging: fields compose into a potential whose gradient drives the agent](docs/assets/images/efi_simple_20250817_172738.gif)
 
 ## Overview
 
-EFI explores the use of cellular automata (CA) as a substrate for real-time, distributed intelligence in embodied agents. The framework combines:
+EFI explores the use of cellular automata (CA) as a substrate for real-time, distributed intelligence in embodied agents. Behavior emerges from local field dynamics — attractor and repulsor fields updated by masked diffusion and composed into a single potential whose gradient selects actions — rather than from a centralized planner or policy network. The framework combines:
 
 - **Chemotaxis Fields**: Diffusion-based scent trails for navigation
 - **Memory Systems**: Visit trails and novelty detection
 - **Schema Learning**: Local Oja/BCM/slowness-based prototype learning
-- **CA-Native Processing**: All computations use local field operations
+- **Affect & Membranes**: Nociception-driven safety fields and learning gates
+- **CA-Native Processing**: Computations built from local field operations
+
+**Results at a glance**: ablations show the repulsive visit trail is the critical component for exploration; online valence learning flips preferences from experience (rapid, stable B-avoidance). See the [experiment report](docs/EXPERIMENT_REPORT.md), the [research site](https://jbwinters.github.io/embodied-field-intelligence/), the [roadmap](docs/ROADMAP.md), and the [paper draft](paper/efi_paper.tex).
 
 ## Installation
+
+Requires Python 3.10+.
 
 ### Basic Installation
 
 ```bash
-pip install -r requirements.txt
 pip install -e .
 ```
 
@@ -120,18 +130,17 @@ env = gym.make("CAForage-v0")
 embodied_field_intelligence/
 ├── efi/                    # Main package
 │   ├── configs/           # Configuration dataclasses
-│   ├── core/              # Core utilities (diffusion, fields)
+│   ├── core/              # Core utilities (diffusion, fields, affect, membranes)
 │   ├── agents/            # Agent implementations
 │   ├── envs/              # Environment and Gym wrapper
 │   ├── evaluation/        # Experiment runners and metrics
-│   └── visualization/     # Plotting and video generation
+│   ├── visualization/     # Plotting and video generation
+│   └── cli.py             # Command-line interface (`efi` console script)
 ├── tests/                 # Unit tests
-├── scripts/               # Public analysis and demo utilities
-├── docs/                  # Documentation and reports
-├── exports/               # GIF and video exports
-├── results/               # Experiment results
-├── runs/                  # Run artifacts and logs
-└── cli.py                # Command-line interface
+├── scripts/               # Analysis and demo utilities
+├── docs/                  # Documentation, reports, and research site
+├── paper/                 # LaTeX paper draft
+└── cli.py                 # Thin shim so `python cli.py ...` works from the repo root
 ```
 
 ## Key Components
@@ -236,7 +245,7 @@ fig = plot_experiment_results(results, save_path="results.png")
 If you use this code in your research, please cite:
 
 ```bibtex
-@software{efi2024,
+@software{efi2025,
   title={Embodied Field Intelligence},
   author={Joshua Winters},
   year={2025},
