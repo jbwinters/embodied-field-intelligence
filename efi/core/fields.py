@@ -173,11 +173,14 @@ def pick_action_from_potential(
     temperature: float = 0.0,
     last_action: int | None = None,
     no_backtrack: bool = False,
-    momentum: float = 0.0
+    momentum: float = 0.0,
+    rng: "np.random.RandomState | None" = None
 ) -> int:
     """
     Choose among 4-neighbors. If temperature>0, add Gumbel noise to scores.
     Optional momentum toward last_action; optional no-backtrack when stuck.
+    Pass a seeded `rng` for reproducible sampling; falls back to the global
+    numpy RNG otherwise.
     """
     import numpy as np
 
@@ -205,7 +208,8 @@ def pick_action_from_potential(
 
     if temperature and temperature > 0:
         # Gumbel-max sampling (local noise in the action space, not the map)
-        g = np.random.gumbel(loc=0.0, scale=float(temperature), size=4).astype(np.float32)
+        sampler = rng if rng is not None else np.random
+        g = sampler.gumbel(loc=0.0, scale=float(temperature), size=4).astype(np.float32)
         return int(np.argmax(s + g))
     else:
         return int(np.argmax(s))

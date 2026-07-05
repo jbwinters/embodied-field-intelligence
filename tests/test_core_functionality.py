@@ -161,19 +161,27 @@ class TestSchemaField:
         assert schema.Smaps.shape == (4, 20, 20)
         
     def test_schema_update(self):
-        """Test schema prototype updates."""
+        """Test schema prototype updates and reward-gated deposition."""
+        rng = np.random.RandomState(0)
         schema = SchemaField(20, 20, 6, SchemaConfig(tile=5, K=4, enabled=True, eta=0.1))
-        
+
         # Create feature input
-        feats = np.random.randn(20, 20, 6).astype(np.float32) * 0.1
-        
+        feats = rng.randn(20, 20, 6).astype(np.float32) * 0.1
+
         initial_Wp = schema.Wp.copy()
         schema.update(feats)
-        
+
         # Weights should change
         assert not np.allclose(schema.Wp, initial_Wp)
-        
-        # Schema maps should be generated
+
+        # Deposition is valence-gated: before any reward is experienced,
+        # the schema bias stays neutral (all-zero maps).
+        assert np.all(schema.Smaps == 0)
+
+        # After a reward, winning prototypes acquire valence and the next
+        # update deposits signed activation into the maps.
+        schema.update_valence(1.0)
+        schema.update(feats)
         assert np.any(schema.Smaps != 0)
         
     def test_schema_bias_field(self):

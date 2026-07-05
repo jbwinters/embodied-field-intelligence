@@ -82,24 +82,25 @@ class TestForageWorld:
         assert not info["moved"]
     
     def test_target_collection(self):
-        """Test target collection rewards."""
+        """Targets are collected by moving onto them; pickup is checked at
+        the cell the agent ends the step on."""
         cfg = EnvConfig(H=10, W=10, seed=42)
         env = ForageWorld(cfg)
         env.reset()
-        
-        # Place agent on target A
-        target_pos = np.where(env.TA)
-        if len(target_pos[0]) > 0:
-            env.y, env.x = target_pos[0][0], target_pos[1][0]
-            
-            # Step to collect
-            obs, reward, done, info = env.step(0)
-            
-            # Check reward includes target A reward
-            assert reward >= cfg.reward_A + cfg.step_cost
-            
-            # Check target was removed
-            assert not env.TA[target_pos[0][0], target_pos[1][0]]
+
+        # Deterministic setup: open arena, one A target directly above agent
+        env.walls[:] = False
+        env.TA[:] = False
+        env.TB[:] = False
+        env.y, env.x = 5, 5
+        env.TA[4, 5] = True
+
+        obs, reward, done, info = env.step(0)  # move up onto the target
+
+        assert info["picked"] == "A"
+        assert reward == pytest.approx(cfg.reward_A + cfg.step_cost)
+        assert not env.TA[4, 5]
+        assert done  # last remaining target was collected
     
     def test_episode_termination(self):
         """Test episode termination conditions."""

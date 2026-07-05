@@ -55,16 +55,20 @@ class TestDiffusion:
         assert np.allclose(result, 0.9)
     
     def test_boundary_conditions(self):
-        """Test that boundaries are kept at zero."""
-        # Create field with values at edges
+        """Grid edges are zero-flux, not sinks: scent on border cells must
+        survive diffusion (agents can walk on edges), while wall cells are
+        forced to zero."""
         field = np.ones((5, 5), dtype=np.float32)
         walls = np.zeros_like(field, dtype=bool)
-        
-        # Diffuse
+        walls[2, 2] = True
+
         result = diffuse_masked(field, walls, diff=0.1, decay=0.0, steps=1)
-        
-        # Check boundaries are zero
-        assert np.all(result[0, :] == 0.0)  # Top edge
-        assert np.all(result[-1, :] == 0.0)  # Bottom edge
-        assert np.all(result[:, 0] == 0.0)  # Left edge
-        assert np.all(result[:, -1] == 0.0)  # Right edge
+
+        # Border cells keep their scent (edge-safe averaging, no leakage)
+        assert np.all(result[0, :] > 0.0)   # Top edge
+        assert np.all(result[-1, :] > 0.0)  # Bottom edge
+        assert np.all(result[:, 0] > 0.0)   # Left edge
+        assert np.all(result[:, -1] > 0.0)  # Right edge
+
+        # Walls act as sinks
+        assert result[2, 2] == 0.0

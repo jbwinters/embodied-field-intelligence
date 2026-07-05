@@ -133,8 +133,6 @@ def test_field_controller():
     # Verify B valence went negative
     assert agent2.valence["B"] < 0, "B valence should be negative after learning"
     print("\n✓ B avoidance learned successfully!")
-    
-    return True
 
 
 if __name__ == "__main__":

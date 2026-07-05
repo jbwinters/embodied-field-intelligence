@@ -6,6 +6,7 @@ import pytest
 from efi.configs import EnvConfig, AgentConfig, Ablations
 from efi.envs import ForageWorld
 from efi.agents import ChemotaxisAgentCA
+from efi.evaluation import run_episode
 
 
 class TestChemotaxisAgent:
@@ -125,23 +126,31 @@ class TestChemotaxisAgent:
         assert np.all(fields["Novel"] == 0)
     
     def test_stuck_detection(self):
-        """Test stuck detection mechanism."""
-        env_cfg = EnvConfig(H=10, W=10, seed=42)
+        """stuck_count is owned by the runner: it increments after each
+        failed move and resets on a successful one (see run_episode)."""
+        env_cfg = EnvConfig(H=5, W=5, max_steps=6, seed=0)
         env = ForageWorld(env_cfg)
-        obs = env.reset()
-        
-        agent_cfg = AgentConfig(seed=42, anti_stuck_after=3)
+
+        # Box the agent in so that every move bumps a wall.
+        original_reset = env.reset
+
+        def boxed_reset():
+            original_reset()
+            env.walls[:] = True
+            env.walls[2, 2] = False
+            env.TA[:] = False
+            env.TB[:] = False
+            env.TA[0, 0] = True  # unreachable target keeps the episode alive
+            env.y, env.x = 2, 2
+            return env._obs()
+
+        env.reset = boxed_reset
+
+        agent_cfg = AgentConfig(seed=0, anti_stuck_after=3)
         ablate = Ablations()
-        
         agent = ChemotaxisAgentCA(env, agent_cfg, ablate)
-        agent.reset()
-        
-        # Stay in same position for multiple steps
-        initial_pos = (env.y, env.x)
-        for i in range(5):
-            _, _ = agent.step(obs)
-            
-            if i < agent_cfg.anti_stuck_after:
-                assert agent.stuck_count == i + 1
-            else:
-                assert agent.stuck_count >= agent_cfg.anti_stuck_after
+
+        run_episode(env, agent, None, ablate)
+
+        # Every step bumped, so the runner incremented the counter each time.
+        assert agent.stuck_count == env_cfg.max_steps

@@ -90,8 +90,6 @@ def test_affect_system():
     print("  - Membrane fields maintain safe distance from walls")
     print("  - Brain membrane gates learning under stress")
     print("  - Safety metrics tracked (bumps, pain, wall distance)")
-    
-    return metrics_base, metrics_affect
 
 
 if __name__ == "__main__":

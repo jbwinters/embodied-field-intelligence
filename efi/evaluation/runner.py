@@ -266,7 +266,8 @@ def run_episode(
             temperature=temp,
             last_action=getattr(agent, "last_action", None),
             no_backtrack=no_backtrack,
-            momentum=momentum
+            momentum=momentum,
+            rng=getattr(agent, "rng", None)
         )
 
         # Step env

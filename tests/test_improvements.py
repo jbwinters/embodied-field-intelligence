@@ -217,20 +217,25 @@ class TestConvolutionalSchema:
     
     def test_conv_deposition_spreads_activation(self):
         """Test that convolutional deposition spreads activation across tile."""
+        rng = np.random.RandomState(0)
         schema = SchemaField(H=10, W=10, feature_dim=6,
                             cfg=SchemaConfig(K=2, tile=5, conv_deposition=True))
-        
+
         # Create feature input
-        feats = np.random.randn(10, 10, 6).astype(np.float32)
-        
+        feats = rng.randn(10, 10, 6).astype(np.float32)
+
         # Force a specific tile to have high activation
         schema.Wp[0, 0, 0, :] = feats[2, 2, :] / np.linalg.norm(feats[2, 2, :])
-        
+
+        # Deposition is valence-gated: establish winners, reward them, then
+        # update again so the signed deposition is nonzero.
         schema.update(feats)
-        
+        schema.update_valence(1.0)
+        schema.update(feats)
+
         # Check that activation spreads across the tile, not just at center
-        tile_activation = schema.Smaps[0, 0:5, 0:5]
-        
+        tile_activation = np.abs(schema.Smaps[0, 0:5, 0:5])
+
         # With conv deposition, multiple cells should be active
         active_cells = np.sum(tile_activation > 0)
         assert active_cells > 1, "Convolutional deposition should activate multiple cells"

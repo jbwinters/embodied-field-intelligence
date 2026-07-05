@@ -27,6 +27,11 @@ class SchemaConfig:
     
     # Control influence
     alpha_schema: float = 0.35  # strength into P_eff (positive bias)
-    
+
+    # Deposition / valence
+    conv_deposition: bool = True  # spread deposition across the whole tile (vs. tile center only)
+    beta_valence: float = 2.0     # tanh temperature for signed (reward-aware) deposition
+    rho_valence: float = 0.03     # EWMA rate for prototype valence updates
+
     # Random seed
     seed: int = 0
