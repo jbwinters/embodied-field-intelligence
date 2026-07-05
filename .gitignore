@@ -70,6 +70,22 @@ logs/
 *.h5
 *.hdf5
 
+# ...but keep the GitHub Pages site assets (results data and figures)
+!docs/assets/**/*.json
+!docs/assets/**/*.csv
+!docs/assets/**/*.png
+!docs/assets/**/*.gif
+
+# LaTeX build artifacts (paper/)
+*.aux
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.toc
+*.bbl
+*.blg
+
 # Documentation
 docs/_build/
 docs/build/
@@ -84,6 +100,10 @@ background_texts/conversation*.txt
 
 # Internal background notes and local scratch scripts
 background_texts/
+planning/
+
+# Machine-specific direnv config
+.envrc
 scripts/debug_*.py
 scripts/simple_*.py
 scripts/test_*.py
@@ -91,3 +111,29 @@ scripts/wall_hug_test.py
 scripts/cli_field.py
 scripts/comprehensive_analysis.py
 scripts/analyze_field_controller.py
+
+# Logs
+logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dev-debug.log
+# Dependency directories
+node_modules/
+# Environment variables
+.env
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+# OS specific
+
+# Task files (local Task Master tool)
+tasks.json
+tasks/
+.taskmaster/
+.env.example

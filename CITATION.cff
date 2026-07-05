@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Embodied Field Intelligence"
+abstract: "A control substrate where behavior emerges from local, cellular-automaton style field dynamics: attractor/repulsor fields composed into a potential whose local gradient selects actions, with online valence learning and affect-modulated safety membranes."
+authors:
+  - family-names: Winters
+    given-names: Joshua
+type: software
+license: MIT
+repository-code: "https://github.com/jbwinters/embodied-field-intelligence"
+year: 2025

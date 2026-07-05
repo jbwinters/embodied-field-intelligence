@@ -7,7 +7,7 @@ name = "embodied-field-intelligence"
 version = "0.1.0"
 description = "CA-based framework for embodied artificial intelligence"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
     {name = "Joshua Winters"},
@@ -22,6 +22,7 @@ classifiers = [
 
 dependencies = [
     "numpy>=1.20.0",
+    "scipy>=1.7.0",  # Distance transforms (membranes)
     "matplotlib>=3.3.0",
     "Pillow>=8.0.0",  # For GIF export
     "pandas>=2.0.0",  # For data analysis
@@ -40,14 +41,14 @@ dev = [
 viz = ["ffmpeg-python>=0.2.0"]
 
 [project.scripts]
-efi = "cli:main"
+efi = "efi.cli:main"
 
 [tool.black]
 line-length = 100
-target-version = ['py39', 'py310', 'py311']
+target-version = ['py310', 'py311', 'py312']
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.10"
 warn_return_any = true
 warn_unused_configs = true
 ignore_missing_imports = true
