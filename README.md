@@ -10,6 +10,14 @@ A framework for embodied artificial intelligence from local field dynamics: an a
 
 *The episode viewer (`python cli.py interactive`, then open `runs/interactive_latest.html`): the agent's beliefs p(A)/p(B), value field V, state costs q, and information-gain reward evolve as it forages; orange arrows are the live policy distribution π ∝ exp(V/λ). Telemetry strips track reward, λ, the value-sweep residual, and learned valences — hover any panel for a synchronized cell probe. Regenerate this animation with `python scripts/make_viewer_demo.py`.*
 
+### Watch it re-value the world
+
+At step 300 the rewards swap: everything the agent liked becomes aversive and vice versa. Because values are recomputed from beliefs every tick (not memorized), a few pickups flip the learned valences and the whole policy reverses — watch the VALENCES strip cross and the reward spikes resume on the other side of the swap line:
+
+![Policy reversal: rewards swap mid-episode, valences cross, and the agent switches targets](docs/assets/images/viewer_swap_demo.gif)
+
+*25×25, regrowing targets, reward swap at step 300 (`python scripts/make_swap_demo.py`). This is the revaluation experiment from the paper (adaptation lag 5 steps vs 69–83 for trained baselines), playing live.*
+
 ## Overview
 
 EFI explores the use of cellular automata (CA) as a substrate for real-time, distributed intelligence in embodied agents. Behavior emerges from local field dynamics — attractor and repulsor fields updated by masked diffusion and composed into a single potential whose gradient selects actions — rather than from a centralized planner or policy network. The framework combines:
