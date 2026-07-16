@@ -611,6 +611,8 @@ def build_parser():
     interactive_parser = subparsers.add_parser("interactive", help="Run episode with interactive viewer")
     add_common_args(interactive_parser)
     interactive_parser.add_argument("--auto-play", action="store_true", help="Auto-play on start")
+    interactive_parser.add_argument("--html", action="store_true",
+                                    help="Always produce the HTML viewer (skip the matplotlib window)")
     
     # ASCII debug mode
     ascii_parser = subparsers.add_parser("ascii", help="Run episode with ASCII visualization")
@@ -755,6 +757,11 @@ def run_interactive(args):
     if episode_data:
         # Try matplotlib viewer first, fall back to HTML if no display
         try:
+            import os
+            if getattr(args, "html", False):
+                raise RuntimeError("HTML viewer requested")
+            if not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")):
+                raise RuntimeError("No display")
             import matplotlib
             backend = matplotlib.get_backend()
             if 'Agg' in backend or 'pdf' in backend or 'svg' in backend:

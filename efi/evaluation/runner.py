@@ -144,21 +144,12 @@ def run_episode(
             if affect_state is not None:
                 agent.affect_state = affect_state
 
+            # The Oja/BCM schema is retired on this path (the controller's
+            # predictive schema replaced it): its feature stack takes
+            # gradients of the value field, whose -VBIG wall sentinels
+            # explode the prototypes and poison V through the bias term.
             schema_bias = None
             Ssum = np.zeros_like(GA)
-            if schema and schema.cfg.enabled and ablate.schema:
-                V_base_for_schema = agent.compose_value(
-                    corner_field=Hc if ablate.corner else None,
-                    wall_prox_field=W_prox,
-                    schema_bias=None,
-                    frontier_weight=frontier_weight,
-                    pain_field=pain_field_array if agent.cfg.affect_enabled and affect_state else None,
-                    membrane_field=membrane_field_array if agent.cfg.membrane_enabled and affect_state else None
-                )
-                feats = build_features_for_schema(GA, GB, Novel, Vtrail, Hc, V_base_for_schema)
-                schema.update(feats)
-                Ssum = np.sum(schema.Smaps, axis=0).astype(np.float32)
-                schema_bias = schema.bias_field()
 
             P_eff = agent.compose_value(
                 corner_field=Hc if ablate.corner else None,
@@ -562,9 +553,12 @@ def run_episode(
                     'stuck_count': agent.stuck_count,
                     'reward': r,
                     'valA': float(agent.valA),
-                    'valB': float(agent.valB)
+                    'valB': float(agent.valB),
+                    'pos': [int(env.y), int(env.x)],
                 }
             }
+            if getattr(agent, "known_walls", None) is not None:
+                fields_dict['Walls'] = agent.known_walls.copy()
             
             # LMDP-mode quantities: state costs, epistemic reward, lambda,
             # and the per-tick fixed-point residual
