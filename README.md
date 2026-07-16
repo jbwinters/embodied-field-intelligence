@@ -4,9 +4,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](pyproject.toml)
 
-A CA-based framework for embodied artificial intelligence using cellular automata, chemotaxis fields, and schema learning.
+A framework for embodied artificial intelligence from local field dynamics: an agent with a 5×5 window and internal state only, controlled by Bayes-filter belief fields and a linearly-solvable-MDP value recursion — zero training episodes.
 
-![EFI agent foraging: fields compose into a potential whose gradient drives the agent](docs/assets/images/efi_simple_20250817_172738.gif)
+![The EFI episode viewer: beliefs, value field, state costs, info gain, and the policy distribution evolving live, with reward/λ/residual/valence telemetry below](docs/assets/images/viewer_demo.gif)
+
+*The episode viewer (`python cli.py interactive`, then open `runs/interactive_latest.html`): the agent's beliefs p(A)/p(B), value field V, state costs q, and information-gain reward evolve as it forages; orange arrows are the live policy distribution π ∝ exp(V/λ). Telemetry strips track reward, λ, the value-sweep residual, and learned valences — hover any panel for a synchronized cell probe. Regenerate this animation with `python scripts/make_viewer_demo.py`.*
 
 ## Overview
 
