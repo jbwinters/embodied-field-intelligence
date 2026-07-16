@@ -6,15 +6,17 @@
 
 A framework for embodied artificial intelligence from local field dynamics: an agent with a 5×5 window and internal state only, controlled by Bayes-filter belief fields and a linearly-solvable-MDP value recursion — zero training episodes.
 
-![The EFI episode viewer: beliefs, value field, state costs, info gain, and the policy distribution evolving live, with reward/λ/residual/valence telemetry below](docs/assets/images/viewer_demo.gif)
+![A 35×35 foraging run: the agent collects every appetitive target while threading between twenty aversive ones](docs/assets/images/grid_demo.gif)
 
-*The episode viewer (`python cli.py interactive`, then open `runs/interactive_latest.html`): the agent's beliefs p(A)/p(B), value field V, state costs q, and information-gain reward evolve as it forages; orange arrows are the live policy distribution π ∝ exp(V/λ). Telemetry strips track reward, λ, the value-sweep residual, and learned valences — hover any panel for a synchronized cell probe. Regenerate this animation with `python scripts/make_viewer_demo.py`.*
+*35×35, 12 appetitive targets (green), 20 aversive ones (magenta), zero training episodes. The agent maps mines from single glances and plans around them as path costs: it collects **all 12 A while touching exactly one B** — the one it needed to taste to learn the sign. Blue trace = recent path. Reproduce: `python scripts/make_grid_demo.py`.*
 
 ### Watch it re-value the world
 
-At step 300 the rewards swap: everything the agent liked becomes aversive and vice versa. Because values are recomputed from beliefs every tick (not memorized), a few pickups flip the learned valences and the whole policy reverses — watch the VALENCES strip cross and the reward spikes resume on the other side of the swap line:
+Every internal quantity is inspectable live: `python cli.py interactive` writes `runs/interactive_latest.html` — belief fields p(A)/p(B), the value field V, state costs q, the information-gain reward, and the policy distribution π ∝ exp(V/λ) as arrows, with telemetry strips (reward, λ, value residual, valences, affect) below and a synchronized cell probe on hover.
 
-![Policy reversal: rewards swap mid-episode, valences cross, and the agent switches targets](docs/assets/images/viewer_swap_demo.gif)
+The episode below runs that viewer through the revaluation experiment: at step 300 the rewards swap, and everything the agent liked becomes aversive and vice versa. Because values are recomputed from beliefs every tick (not memorized), a few pickups flip the learned valences and the whole policy reverses — watch the VALENCES strip cross and the reward spikes resume on the other side of the swap line:
+
+![Policy reversal in the episode viewer: rewards swap mid-episode, valences cross, and the agent switches targets](docs/assets/images/viewer_swap_demo.gif)
 
 *25×25, regrowing targets, reward swap at step 300 (`python scripts/make_swap_demo.py`). This is the revaluation experiment from the paper (adaptation lag 5 steps vs 69–83 for trained baselines), playing live.*
 
