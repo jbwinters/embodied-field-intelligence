@@ -150,6 +150,24 @@ The HTML viewer shows 6 field panels:
 - **Emergent behavior**: Complex navigation should emerge from simple field interactions
 - **Continuous adaptation**: No discrete state machines or mode switches
 
+### **Locality Budget**
+
+Every internal operator is either a single radius-1 stencil pass per tick or
+an explicitly iterated relaxation with a declared iteration count k (its
+light cone: information propagates at most k cells per call). No global
+transforms (scipy EDT, flood fill) inside agent internals; metrics code in
+`efi/evaluation/` may use global truth (it measures, it doesn't decide).
+
+| Operator | Where | Radius per call |
+|---|---|---|
+| `diffuse_masked` | core/diffusion.py | `steps` (1-4 typical) |
+| `logodds_predict` | core/belief.py | 1 |
+| `value_sweeps` | core/desirability.py | `sweeps` (= kappa, 3 typical; H+W on episode start) |
+| `maxplus_distance` | core/localdist.py | `iters` (declared per call site) |
+| membrane shells | core/membrane.py | `ceil(max_radius)+1` |
+| frontier reachability | core/fields.py | `H+W` (deliberate full-map budget) |
+| trail/novelty updates | core/fields.py | 1 |
+
 ### **Future Work**
 
 - Schema learning for long-term adaptation

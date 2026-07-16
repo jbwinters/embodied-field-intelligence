@@ -1,7 +1,13 @@
-"""Protective membrane fields for safer navigation."""
+"""Protective membrane fields for safer navigation.
+
+Distances are geodesic L1 (local max-plus relaxation, efi/core/localdist.py),
+not Euclidean: shells respect wall geometry and every operation is a bounded
+number of radius-1 stencil passes -- no global transforms.
+"""
 
 import numpy as np
-from scipy.ndimage import distance_transform_edt
+
+from .localdist import BIG, maxplus_distance
 
 
 def peripersonal_field(
@@ -45,13 +51,15 @@ def peripersonal_field(
     
     # Only create membrane for walls we can see
     visible_walls = known_walls & seen
-    
+
     if not visible_walls.any():
         return field
-    
-    # Distance transform from walls
-    dist_from_walls = distance_transform_edt(~visible_walls)
-    
+
+    # Geodesic distance from visible walls, local relaxation only.
+    # Iteration budget = shell radius (the light cone of this operator).
+    dist_from_walls = maxplus_distance(visible_walls, blocked_mask=None,
+                                       iters=int(np.ceil(max_radius)) + 1)
+
     # Create membrane field that decays with distance
     # Stronger near walls, decays to 0 at radius R_t
     mask = dist_from_walls < R_t
@@ -173,10 +181,12 @@ def corridor_membrane(
     """
     H, W = walls.shape
     field = np.zeros((H, W), dtype=np.float32)
-    
-    # Distance from walls
-    dist = distance_transform_edt(~walls)
-    
+
+    # Geodesic distance from walls (local relaxation, radius-bounded)
+    dist = maxplus_distance(walls, blocked_mask=None,
+                            iters=int(np.ceil(corridor_width)) + 1)
+    dist[dist >= BIG] = corridor_width + 1.0  # far cells: outside corridors
+
     # Detect corridor regions (narrow passages)
     # A point is in a corridor if it's free space with limited distance to walls
     corridor_mask = (dist > 0) & (dist <= corridor_width)

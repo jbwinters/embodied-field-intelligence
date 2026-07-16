@@ -11,8 +11,9 @@ from ..agents import ChemotaxisAgentCA, SchemaField, build_features_for_schema
 from ..core import (
     corner_hazard,
     wall_proximity_field,
-    effective_potential, 
+    effective_potential,
     pick_action_from_potential,
+    pick_action_from_value,
     set_global_seed,
     compose_potential,
     # Affect system
@@ -66,6 +67,12 @@ def run_episode(
     cosines = []  # Track gradient-motion alignment
     prev_yx = (env.y, env.x)
     
+    # --- LMDP control diagnostics ---
+    lam_history: List[float] = []
+    residual_history: List[float] = []
+    gamma_hats: List[float] = []
+    barrier_deadlocks = 0
+
     # --- NEW tracking for enhanced metrics ---
     visited_mask = np.zeros_like(env.walls, dtype=bool)
     visited_mask[env.y, env.x] = True
@@ -130,7 +137,38 @@ def run_episode(
             Novel = Novel + frontier_weight * U
         
         # --- Potential composition ---
-        if hasattr(agent, "compose_P"):
+        use_lmdp = (getattr(agent, "control_mode", "legacy") == "lmdp"
+                    and hasattr(agent, "compose_value"))
+        if use_lmdp:
+            # LMDP path: value field from warm-started local sweeps.
+            if affect_state is not None:
+                agent.affect_state = affect_state
+
+            schema_bias = None
+            Ssum = np.zeros_like(GA)
+            if schema and schema.cfg.enabled and ablate.schema:
+                V_base_for_schema = agent.compose_value(
+                    corner_field=Hc if ablate.corner else None,
+                    wall_prox_field=W_prox,
+                    schema_bias=None,
+                    frontier_weight=frontier_weight,
+                    pain_field=pain_field_array if agent.cfg.affect_enabled and affect_state else None,
+                    membrane_field=membrane_field_array if agent.cfg.membrane_enabled and affect_state else None
+                )
+                feats = build_features_for_schema(GA, GB, Novel, Vtrail, Hc, V_base_for_schema)
+                schema.update(feats)
+                Ssum = np.sum(schema.Smaps, axis=0).astype(np.float32)
+                schema_bias = schema.bias_field()
+
+            P_eff = agent.compose_value(
+                corner_field=Hc if ablate.corner else None,
+                wall_prox_field=W_prox,
+                schema_bias=schema_bias,
+                frontier_weight=frontier_weight,
+                pain_field=pain_field_array if agent.cfg.affect_enabled and affect_state else None,
+                membrane_field=membrane_field_array if agent.cfg.membrane_enabled and affect_state else None
+            )
+        elif hasattr(agent, "compose_P"):
             # Agent has compose_P method - delegate to it
             # Pass affect state to agent for semiring mode selection
             if affect_state is not None:
@@ -223,9 +261,18 @@ def run_episode(
 
         # Enhanced temperature schedule using trail strength AND field flatness
         trail_here = Vtrail[env.y, env.x]
-        
-        # Compute local gradient magnitude
-        gy, gx = np.gradient(P_eff.astype(np.float32))
+
+        # Compute local gradient magnitude (for temperature and the
+        # gradient-motion alignment metric). In LMDP mode the value field
+        # holds a -VBIG sentinel at known walls; flatten those to the
+        # passable minimum so np.gradient stays meaningful near walls.
+        P_for_grad = P_eff.astype(np.float32)
+        if use_lmdp:
+            P_for_grad = P_for_grad.copy()
+            passable_vals = P_for_grad[P_for_grad > -1e8]
+            if passable_vals.size:
+                P_for_grad[P_for_grad <= -1e8] = passable_vals.min()
+        gy, gx = np.gradient(P_for_grad)
         grad_mag = np.sqrt(gy[env.y, env.x]**2 + gx[env.y, env.x]**2)
         
         # Temperature from trail (stuck signal)
@@ -261,14 +308,44 @@ def run_episode(
             # Cap temperature if no pain boost
             temp = min(temp, 2.5)
         
-        a = pick_action_from_potential(
-            P_eff, env.y, env.x, walls_mask,
-            temperature=temp,
-            last_action=getattr(agent, "last_action", None),
-            no_backtrack=no_backtrack,
-            momentum=momentum,
-            rng=getattr(agent, "rng", None)
-        )
+        if use_lmdp:
+            # LMDP-optimal action: softmax over neighbor V with temperature
+            # lam (affect-modulated; same lam the sweeps used).
+            # No separate temperature/momentum/no-backtrack machinery.
+            lam_t = float(getattr(agent, "lam_current", agent.lam))
+            lam_history.append(lam_t)
+
+            res = list(getattr(agent, "last_residuals", []))
+            if res:
+                residual_history.append(res[-1])
+                if len(res) >= 2 and res[-2] > 1e-12:
+                    gamma_hats.append(res[-1] / res[-2])
+
+            # Barrier deadlock: every physically open neighbor is forbidden
+            # (value sentinel). The softmax then degrades to least-bad; we
+            # log the event rather than crash.
+            open_vals = []
+            for dy_n, dx_n in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                ny, nx = env.y + dy_n, env.x + dx_n
+                if 0 <= ny < env.H and 0 <= nx < env.W and not walls_mask[ny, nx]:
+                    open_vals.append(float(P_eff[ny, nx]))
+            if open_vals and max(open_vals) <= -1e8:
+                barrier_deadlocks += 1
+
+            a = pick_action_from_value(
+                P_eff, env.y, env.x, walls_mask,
+                lam=lam_t,
+                rng=getattr(agent, "rng", None)
+            )
+        else:
+            a = pick_action_from_potential(
+                P_eff, env.y, env.x, walls_mask,
+                temperature=temp,
+                last_action=getattr(agent, "last_action", None),
+                no_backtrack=no_backtrack,
+                momentum=momentum,
+                rng=getattr(agent, "rng", None)
+            )
 
         # Step env
         obs, r, done, info = env.step(a)
@@ -295,6 +372,9 @@ def run_episode(
         picked = info.get("picked")
         if picked in ("A", "B"):
             pickup_positions.append((env.y, env.x))
+            # Belief update: the target is gone from this cell
+            if hasattr(agent, "notify_pickup"):
+                agent.notify_pickup(picked)
         
         # Counterfactual valence learning (every step)
         if hasattr(agent, 'learn_valence_counterfactual'):
@@ -419,21 +499,21 @@ def run_episode(
             # Apply gated learning
             orig_lr = agent.cfg.valence_lr
             agent.cfg.valence_lr = orig_lr * learning_gate
-            agent.learn_valence("A", env.cfg.reward_A)
+            agent.learn_valence("A", getattr(env, "reward_A", env.cfg.reward_A))
             agent.cfg.valence_lr = orig_lr
             # Update schema valence with positive reward
             if schema and schema.cfg.enabled:
-                schema.update_valence(env.cfg.reward_A * learning_gate)
+                schema.update_valence(getattr(env, "reward_A", env.cfg.reward_A) * learning_gate)
         elif picked == "B":
             targets_collected["B"] += 1
             # Apply gated learning  
             orig_lr = agent.cfg.valence_lr
             agent.cfg.valence_lr = orig_lr * learning_gate
-            agent.learn_valence("B", env.cfg.reward_B)
+            agent.learn_valence("B", getattr(env, "reward_B", env.cfg.reward_B))
             agent.cfg.valence_lr = orig_lr
             # Update schema valence with negative reward
             if schema and schema.cfg.enabled:
-                schema.update_valence(env.cfg.reward_B * learning_gate)
+                schema.update_valence(getattr(env, "reward_B", env.cfg.reward_B) * learning_gate)
         
         # Recompute affect fields after state update for accurate visualization
         if affect_state and agent.cfg.affect_enabled and record_fields:
@@ -471,7 +551,7 @@ def run_episode(
             fields_dict = {
                 'GA': GA.copy(),
                 'GB': GB.copy(),
-                'P_eff': P_eff.copy(),
+                'P_eff': (P_for_grad.copy() if use_lmdp else P_eff.copy()),
                 'Vtrail': Vtrail.copy(),
                 'Novel': Novel.copy(),
                 'Ssum': Ssum.copy(),
@@ -538,7 +618,18 @@ def run_episode(
         coverage=coverage,
         frontier_efficiency=frontier_eff,
         path_optimality=path_opt,
-        backtrack_rate=backtrack
+        backtrack_rate=backtrack,
+        # LMDP control diagnostics
+        barrier_deadlocks=barrier_deadlocks,
+        mean_residual=float(np.mean(residual_history)) if residual_history else 0.0,
+        p95_residual=float(np.percentile(residual_history, 95)) if residual_history else 0.0,
+        gamma_hat_median=float(np.median(gamma_hats)) if gamma_hats else 0.0,
+        mean_lambda=float(np.mean(lam_history)) if lam_history else 0.0,
+        # Predictive schema diagnostics
+        accuracy_predictive=(agent.pschema.heldout_accuracy
+                             if getattr(agent, "pschema", None) else 0.0),
+        schema_rules=(agent.pschema.n_rules
+                      if getattr(agent, "pschema", None) else 0),
     )
 
     episode_data = None
@@ -550,6 +641,106 @@ def run_episode(
         }
 
     return float(ep_ret), frames, metrics, episode_data
+
+
+def run_ego_episode(env, agent) -> Tuple[float, EpisodeMetrics]:
+    """
+    Episode loop for the EgocentricFieldController's closed-box protocol:
+    observe -> think -> act -> efference copy. The agent never receives
+    coordinates, world size, or the true wall map; everything below that
+    reads env truth is measurement (metrics), not agent input.
+    """
+    obs = env.reset()
+    agent.reset()
+
+    affect_state = AffectState() if getattr(agent.cfg, "affect_enabled", False) else None
+
+    ep_ret = 0.0
+    steps = 0
+    bumps_total = 0
+    stuck_count = 0
+    targets_collected = {"A": 0, "B": 0}
+    visited_mask = np.zeros_like(env.walls, dtype=bool)
+    visited_mask[env.y, env.x] = True
+    lam_history, residual_history, gamma_hats = [], [], []
+    pose_errors = []
+
+    # Measurement-side frame alignment (truth is allowed in metrics only)
+    pose0 = agent.pose
+    env0 = (env.y, env.x)
+
+    for t in range(env.max_steps):
+        agent.observe(obs)
+        agent.think(affect_state)
+        a = agent.select_action()
+
+        lam_history.append(float(agent.lam_current))
+        res = list(agent.last_residuals)
+        if res:
+            residual_history.append(res[-1])
+            if len(res) >= 2 and res[-2] > 1e-12:
+                gamma_hats.append(res[-1] / res[-2])
+
+        obs, r, done, info = env.step(a)
+        moved = bool(info.get("moved", False))
+        picked = info.get("picked")
+        agent.after_env_step(a, moved, picked)
+
+        ep_ret += r
+        steps += 1
+        visited_mask[env.y, env.x] = True
+        if not moved:
+            bumps_total += 1
+            stuck_count += 1
+        else:
+            stuck_count = 0
+
+        # Dead-reckoning error: |(pose - pose0) - (envpos - env0)| (L1)
+        dp = (agent.pose[0] - pose0[0], agent.pose[1] - pose0[1])
+        de = (env.y - env0[0], env.x - env0[1])
+        pose_errors.append(abs(dp[0] - de[0]) + abs(dp[1] - de[1]))
+
+        if picked == "A":
+            targets_collected["A"] += 1
+            agent.learn_valence("A", getattr(env, "reward_A", env.cfg.reward_A))
+        elif picked == "B":
+            targets_collected["B"] += 1
+            agent.learn_valence("B", getattr(env, "reward_B", env.cfg.reward_B))
+
+        if affect_state is not None:
+            nociception = compute_nociception(
+                not moved, min(0, r), 0.0, stuck_count,
+                agent.cfg.pain_bump_weight, agent.cfg.pain_reward_weight,
+                agent.cfg.pain_prox_weight, agent.cfg.pain_stuck_weight)
+            affect_state = update_affect(
+                affect_state, nociception, agent.last_surprise, r,
+                agent.cfg.affect_rho_v, agent.cfg.affect_rho_a,
+                agent.cfg.affect_rho_c, agent.cfg.affect_rho_p)
+
+        if done:
+            break
+
+    coverage = compute_coverage(visited_mask & (~env.walls), env.walls)
+    metrics = EpisodeMetrics(
+        total_return=float(ep_ret),
+        steps=steps,
+        targets_collected=targets_collected,
+        efficiency=float(ep_ret) / max(1, steps),
+        valence_snapshot=dict(agent.valence),
+        bumps_per_100=(bumps_total / max(1, steps)) * 100,
+        coverage=coverage,
+        mean_residual=float(np.mean(residual_history)) if residual_history else 0.0,
+        p95_residual=float(np.percentile(residual_history, 95)) if residual_history else 0.0,
+        gamma_hat_median=float(np.median(gamma_hats)) if gamma_hats else 0.0,
+        mean_lambda=float(np.mean(lam_history)) if lam_history else 0.0,
+        mean_pose_error=float(np.mean(pose_errors)) if pose_errors else 0.0,
+        final_pose_error=float(pose_errors[-1]) if pose_errors else 0.0,
+        accuracy_predictive=(agent.pschema.heldout_accuracy
+                             if getattr(agent, "pschema", None) else 0.0),
+        schema_rules=(agent.pschema.n_rules
+                      if getattr(agent, "pschema", None) else 0),
+    )
+    return float(ep_ret), metrics
 
 
 def run_experiment(

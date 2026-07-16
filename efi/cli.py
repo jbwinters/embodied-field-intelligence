@@ -25,6 +25,12 @@ def add_common_args(parser):
     parser.add_argument("--controller", type=str, default="chemotaxis",
                        choices=["chemotaxis", "field"],
                        help="Controller type: chemotaxis (original) or field (generalized)")
+    parser.add_argument("--agent", type=str, default="efi",
+                       choices=["efi", "random", "greedy", "astar", "q"],
+                       help="efi (default) or a baseline agent (eval mode)")
+    parser.add_argument("--q-train-episodes", type=int, default=2000,
+                       dest="q_train_episodes",
+                       help="Training episodes for the tabular-Q baseline")
     
     # Environment
     parser.add_argument("--H", type=int, default=17, help="Grid height")
@@ -64,6 +70,29 @@ def add_common_args(parser):
     parser.add_argument("--trail", type=int, default=1, choices=[0,1])
     parser.add_argument("--corner", type=int, default=1, choices=[0,1])
     parser.add_argument("--schema", type=int, default=1, choices=[0,1])
+    parser.add_argument("--belief", type=int, default=1, choices=[0,1],
+                       help="Use log-odds belief fields for A/B (FieldController only; 0 = legacy scent)")
+
+    # LMDP control (FieldController only)
+    parser.add_argument("--control-mode", type=str, default="lmdp",
+                       choices=["lmdp", "legacy"], dest="control_mode",
+                       help="lmdp: value-sweep control; legacy: potential composition")
+    parser.add_argument("--lam", type=float, default=0.02, dest="lam_base",
+                       help="LMDP risk/temperature lambda (-> 0 is greedy/max-plus)")
+    parser.add_argument("--z-sweeps", type=int, default=3, dest="z_sweeps",
+                       help="Value-iteration sweeps per env tick (kappa)")
+    parser.add_argument("--q-step", type=float, default=0.01, dest="q_step",
+                       help="Subjective per-step effort cost (reward units)")
+    parser.add_argument("--epistemic", type=str, default="infogain",
+                       choices=["infogain", "frontier", "none"], dest="epistemic_mode",
+                       help="Exploration reward: belief-entropy infogain, legacy frontier, or none")
+    parser.add_argument("--ego", type=int, default=0, choices=[0, 1],
+                       help="Egocentric controller: no GPS, no world size; pose by dead reckoning")
+    parser.add_argument("--pyramid-levels", type=int, default=1, choices=[1, 2],
+                       dest="pyramid_levels",
+                       help="2 = add a half-resolution value level (longer horizon per tick)")
+    parser.add_argument("--beta-epist", type=float, default=0.3, dest="beta_epist",
+                       help="Base weight of the information-gain reward")
     
     # Affect system parameters (Phase 1)
     parser.add_argument("--affect-enabled", type=lambda x: x.lower() == 'true', default=False,
@@ -151,6 +180,11 @@ def run_demo(args):
         membrane_r_min=args.membrane_r_min,
         membrane_r_gain_arousal=args.membrane_r_gain_arousal,
         membrane_r_gain_pain=args.membrane_r_gain_pain,
+        use_belief_fields=bool(args.belief),
+        control_mode=args.control_mode, lam_base=args.lam_base,
+        z_sweeps=args.z_sweeps, q_step=args.q_step,
+        epistemic_mode=args.epistemic_mode, beta_epist=args.beta_epist,
+        pyramid_levels=args.pyramid_levels,
         affect_rho_v=args.affect_rho_v,
         affect_rho_a=args.affect_rho_a,
         affect_rho_c=args.affect_rho_c,
@@ -217,8 +251,113 @@ def run_demo(args):
     print(f"[demo] metrics saved at {out_dir/'demo_metrics.json'}")
 
 
+def run_baseline_eval(args):
+    """Evaluate a baseline agent (random/greedy/astar/q) on the same
+    environment distribution as EFI, with a persisted seed list."""
+    from efi.agents.baselines import make_baseline, run_baseline_episode, train_tabular_q
+
+    set_global_seed(args.seed)
+    out_dir = ensure_dir(args.out or f"runs/eval-{args.agent}-{ts()}")
+
+    env_cfg = EnvConfig(
+        H=args.H, W=args.W, win=args.win, p_wall=args.p_wall,
+        n_targets_A=args.nA, n_targets_B=args.nB,
+        max_steps=args.max_steps, seed=args.seed,
+        reward_A=args.reward_A, reward_B=args.reward_B
+    )
+
+    agent = make_baseline(args.agent, seed=args.seed, win=args.win)
+    training_curve = None
+    if getattr(agent, "trains", False):
+        def env_factory(ep):
+            cfg = EnvConfig(**{**asdict(env_cfg), "seed": 100_000 + ep})
+            return ForageWorld(cfg)
+        print(f"[eval:{args.agent}] training for {args.q_train_episodes} episodes...")
+        training_curve = train_tabular_q(env_factory, agent, args.q_train_episodes)
+
+    rows, seed_list = [], []
+    for s in range(args.seeds):
+        seed = args.seed + s
+        seed_list.append(seed)
+        env = ForageWorld(EnvConfig(**{**asdict(env_cfg), "seed": seed}))
+        for ep in range(args.episodes):
+            m = run_baseline_episode(env, agent)
+            rows.append({"seed": seed, "episode": ep, **m})
+
+    returns = [r["return"] for r in rows]
+    summary = {
+        "agent": args.agent,
+        "mean_return": float(np.mean(returns)),
+        "std_return": float(np.std(returns)),
+        "success_rate": float(np.mean([r["success"] for r in rows])),
+        "mean_steps": float(np.mean([r["steps"] for r in rows])),
+    }
+    with open(out_dir / "eval_results.json", "w") as f:
+        json.dump({"config": asdict(env_cfg), "summary": summary,
+                   "metrics": rows, "training_curve": training_curve,
+                   "seeds": seed_list}, f, indent=2)
+    with open(out_dir / "seeds.json", "w") as f:
+        json.dump(seed_list, f)
+    print(f"[eval:{args.agent}] mean return: {summary['mean_return']:.3f} "
+          f"± {summary['std_return']:.3f} | success: {summary['success_rate']:.1%}")
+    return summary
+
+
+def run_ego_eval(args):
+    """Evaluate the egocentric controller (closed-box protocol)."""
+    from efi.agents import EgocentricFieldController
+    from efi.evaluation import run_ego_episode
+
+    set_global_seed(args.seed)
+    out_dir = ensure_dir(args.out or f"runs/eval-ego-{ts()}")
+    rows = []
+    for s in range(args.seeds):
+        seed = args.seed + s
+        env_cfg = EnvConfig(
+            H=args.H, W=args.W, win=args.win, p_wall=args.p_wall,
+            n_targets_A=args.nA, n_targets_B=args.nB,
+            max_steps=args.max_steps, seed=seed,
+            reward_A=args.reward_A, reward_B=args.reward_B)
+        env = ForageWorld(env_cfg)
+        agent_cfg = AgentConfig(
+            valA_init=args.valA_init, valB_init=args.valB_init,
+            valence_lr=args.valence_lr, seed=seed,
+            control_mode=args.control_mode, lam_base=args.lam_base,
+            z_sweeps=args.z_sweeps, q_step=args.q_step,
+            epistemic_mode=args.epistemic_mode, beta_epist=args.beta_epist,
+        pyramid_levels=args.pyramid_levels,
+            affect_enabled=args.affect_enabled,
+            membrane_enabled=args.membrane_enabled)
+        agent = EgocentricFieldController(agent_cfg, Ablations(
+            trail=args.trail, novelty=args.novelty,
+            corner=args.corner, schema=0), win=args.win, seed=seed)
+        for ep in range(args.episodes):
+            ret, m = run_ego_episode(env, agent)
+            rows.append({"seed": seed, "episode": ep, "return": ret,
+                         "steps": m.steps,
+                         "targets_A": m.targets_collected.get("A", 0),
+                         "targets_B": m.targets_collected.get("B", 0),
+                         "coverage": m.coverage,
+                         "mean_pose_error": m.mean_pose_error,
+                         "final_pose_error": m.final_pose_error})
+    returns = [r["return"] for r in rows]
+    summary = {"mean_return": float(np.mean(returns)),
+               "std_return": float(np.std(returns)),
+               "mean_pose_error": float(np.mean([r["mean_pose_error"] for r in rows]))}
+    with open(out_dir / "eval_results.json", "w") as f:
+        json.dump({"summary": summary, "metrics": rows}, f, indent=2)
+    print(f"[eval:ego] mean return: {summary['mean_return']:.3f} "
+          f"± {summary['std_return']:.3f} | pose err: {summary['mean_pose_error']:.2f}")
+
+
 def run_eval(args):
     """Run evaluation mode."""
+    if getattr(args, "agent", "efi") != "efi":
+        run_baseline_eval(args)
+        return
+    if getattr(args, "ego", 0):
+        run_ego_eval(args)
+        return
     set_global_seed(args.seed)
     out_dir = ensure_dir(args.out or f"runs/eval-{ts()}")
     
@@ -251,6 +390,11 @@ def run_eval(args):
         membrane_r_min=args.membrane_r_min,
         membrane_r_gain_arousal=args.membrane_r_gain_arousal,
         membrane_r_gain_pain=args.membrane_r_gain_pain,
+        use_belief_fields=bool(args.belief),
+        control_mode=args.control_mode, lam_base=args.lam_base,
+        z_sweeps=args.z_sweeps, q_step=args.q_step,
+        epistemic_mode=args.epistemic_mode, beta_epist=args.beta_epist,
+        pyramid_levels=args.pyramid_levels,
         affect_rho_v=args.affect_rho_v,
         affect_rho_a=args.affect_rho_a,
         affect_rho_c=args.affect_rho_c,
@@ -274,7 +418,8 @@ def run_eval(args):
     # Run experiment
     results = run_experiment(
         env_cfg, agent_cfg, schema_cfg, ablate,
-        episodes=args.episodes, seeds=args.seeds, base_seed=args.seed
+        episodes=args.episodes, seeds=args.seeds, base_seed=args.seed,
+        use_controller=(getattr(args, "controller", "chemotaxis") == "field")
     )
     
     # Save results
@@ -372,6 +517,11 @@ def run_suite(args):
         membrane_r_min=args.membrane_r_min,
         membrane_r_gain_arousal=args.membrane_r_gain_arousal,
         membrane_r_gain_pain=args.membrane_r_gain_pain,
+        use_belief_fields=bool(args.belief),
+        control_mode=args.control_mode, lam_base=args.lam_base,
+        z_sweeps=args.z_sweeps, q_step=args.q_step,
+        epistemic_mode=args.epistemic_mode, beta_epist=args.beta_epist,
+        pyramid_levels=args.pyramid_levels,
         affect_rho_v=args.affect_rho_v,
         affect_rho_a=args.affect_rho_a,
         affect_rho_c=args.affect_rho_c,
@@ -393,12 +543,13 @@ def run_suite(args):
         ablate = Ablations(**toggles)
         
         results = run_experiment(
-            env_cfg, agent_cfg, 
+            env_cfg, agent_cfg,
             schema_cfg if toggles.get("schema", 1) else None,
             ablate,
-            episodes=args.episodes, 
-            seeds=args.seeds, 
-            base_seed=args.seed
+            episodes=args.episodes,
+            seeds=args.seeds,
+            base_seed=args.seed,
+            use_controller=(getattr(args, "controller", "chemotaxis") == "field")
         )
         
         suite_results.append({
@@ -503,6 +654,11 @@ def run_interactive(args):
         membrane_r_min=args.membrane_r_min,
         membrane_r_gain_arousal=args.membrane_r_gain_arousal,
         membrane_r_gain_pain=args.membrane_r_gain_pain,
+        use_belief_fields=bool(args.belief),
+        control_mode=args.control_mode, lam_base=args.lam_base,
+        z_sweeps=args.z_sweeps, q_step=args.q_step,
+        epistemic_mode=args.epistemic_mode, beta_epist=args.beta_epist,
+        pyramid_levels=args.pyramid_levels,
         affect_rho_v=args.affect_rho_v,
         affect_rho_a=args.affect_rho_a,
         affect_rho_c=args.affect_rho_c,
@@ -667,6 +823,11 @@ def run_ascii(args):
         membrane_r_min=args.membrane_r_min,
         membrane_r_gain_arousal=args.membrane_r_gain_arousal,
         membrane_r_gain_pain=args.membrane_r_gain_pain,
+        use_belief_fields=bool(args.belief),
+        control_mode=args.control_mode, lam_base=args.lam_base,
+        z_sweeps=args.z_sweeps, q_step=args.q_step,
+        epistemic_mode=args.epistemic_mode, beta_epist=args.beta_epist,
+        pyramid_levels=args.pyramid_levels,
         affect_rho_v=args.affect_rho_v,
         affect_rho_a=args.affect_rho_a,
         affect_rho_c=args.affect_rho_c,

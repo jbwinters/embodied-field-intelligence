@@ -1,0 +1,95 @@
+{
+  "env": {
+    "H": 17,
+    "W": 17,
+    "win": 5,
+    "p_wall": 0.12,
+    "n_targets_A": 2,
+    "n_targets_B": 4,
+    "max_steps": 200,
+    "step_cost": -0.01,
+    "bump_pen": -0.02,
+    "reward_A": 1.0,
+    "reward_B": -0.8,
+    "seed": 4
+  },
+  "protocol": {
+    "episodes": 40,
+    "seeds": 5,
+    "q_train_episodes": 2000,
+    "note": "identical env seed lists across agents; normalized = (X - random)/(astar - random); astar is a nearest-target greedy-tour ceiling approximation, not the optimal TSP"
+  },
+  "results": [
+    {
+      "agent": "random",
+      "mean_return": -2.7953999999999892,
+      "std_return": 0.9086290992478652,
+      "success_rate": 0.06,
+      "mean_steps": 200.0,
+      "training_curve": null,
+      "n": 200,
+      "normalized_score": 0.0
+    },
+    {
+      "agent": "greedy",
+      "mean_return": -1.3857999999999995,
+      "std_return": 0.7973320261973651,
+      "success_rate": 0.225,
+      "mean_steps": 200.0,
+      "training_curve": null,
+      "n": 200,
+      "normalized_score": 0.5042569936323946
+    },
+    {
+      "agent": "astar",
+      "mean_return": -1.5933088182151778e-15,
+      "std_return": 9.122088551925631e-17,
+      "success_rate": 1.0,
+      "mean_steps": 200.0,
+      "training_curve": null,
+      "n": 200,
+      "normalized_score": 1.0
+    },
+    {
+      "agent": "q",
+      "mean_return": -2.840699999999998,
+      "std_return": 1.5463031753184748,
+      "success_rate": 0.005,
+      "mean_steps": 200.0,
+      "training_curve": [
+        -2.6577999999999906,
+        -2.736599999999989,
+        -2.67079999999999,
+        -2.488999999999992,
+        -2.482399999999992,
+        -2.532399999999991,
+        -2.5773999999999906,
+        -2.5309999999999913,
+        -2.486199999999991,
+        -2.51279999999999,
+        -2.610399999999991,
+        -2.610399999999991,
+        -2.4837999999999916,
+        -2.469199999999992,
+        -2.503999999999991,
+        -2.418399999999993,
+        -2.4663999999999917,
+        -2.2447999999999935,
+        -2.4863999999999913,
+        -2.464199999999992
+      ],
+      "n": 200,
+      "normalized_score": -0.016205194247695773
+    },
+    {
+      "agent": "efi",
+      "mean_return": -0.08700000000000145,
+      "std_return": 0.2860611822670108,
+      "success_rate": 0.965,
+      "mean_steps": 200.0,
+      "training_curve": null,
+      "n": 200,
+      "normalized_score": 0.9688774415110538
+    }
+  ]
+}

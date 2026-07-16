@@ -18,7 +18,17 @@ EFI explores the use of cellular automata (CA) as a substrate for real-time, dis
 - **Affect & Membranes**: Nociception-driven safety fields and learning gates
 - **CA-Native Processing**: Computations built from local field operations
 
-**Results at a glance**: ablations show the repulsive visit trail is the critical component for exploration; online valence learning flips preferences from experience (rapid, stable B-avoidance). See the [experiment report](docs/EXPERIMENT_REPORT.md), the [research site](https://jbwinters.github.io/embodied-field-intelligence/), the [roadmap](docs/ROADMAP.md), and the [paper draft](paper/efi_paper.tex).
+**Results at a glance** (17×17 ForageWorld, identical seeds, 200 episodes/agent; normalized = (X − random)/(oracle − random); reproduce with `python scripts/make_baseline_table.py`):
+
+| Agent | Mean return | Success | Normalized score | Training episodes |
+|---|---|---|---|---|
+| Random walk | −2.795 ± 0.909 | 6.0% | 0.00 | 0 |
+| Greedy-visible | −1.386 ± 0.797 | 22.5% | 0.50 | 0 |
+| Tabular Q | −2.841 ± 1.546 | 0.5% | −0.02 | 2000 |
+| **EFI (this repo)** | **−0.087 ± 0.286** | **96.5%** | **0.97** | **0** |
+| A* oracle (ceiling) | −0.000 ± 0.000 | 100.0% | 1.00 | 0 |
+
+EFI reaches 97% of a full-observability oracle **with zero training episodes**, from a 5×5 window and internal field dynamics alone. The control law is a linearly-solvable-MDP value recursion computed as a local field operation (see [docs/THEORY.md](docs/THEORY.md)); success no longer degrades with grid size (98.9% at both 15×15 and 30×30). Older results: [experiment report](docs/EXPERIMENT_REPORT.md), [research site](https://jbwinters.github.io/embodied-field-intelligence/), [roadmap](docs/ROADMAP.md), [paper draft](paper/efi_paper.tex).
 
 ## Installation
 

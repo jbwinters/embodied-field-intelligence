@@ -7,13 +7,13 @@
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage[round]{natbib}
 \usepackage{hyperref}
 \usepackage[nameinlink,capitalise,noabbrev]{cleveref}
-\usepackage{subcaption}
 \usepackage{xcolor}
-% --- Figures & plots ---
 \usepackage{tikz}
-\usetikzlibrary{arrows.meta,positioning,fit,calc,matrix}
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.18}
 
@@ -24,27 +24,19 @@
   urlcolor=blue!50!black
 }
 
-% Graphics search paths (add your repo paths here too)
-\graphicspath{{figs/}{figures/}{docs/assets/images/}}
-
-\newtheorem{lemma}{Lemma}
-\newtheorem{theorem}{Theorem}
 \newtheorem{proposition}{Proposition}
+\newtheorem{remark}{Remark}
 
-% Handy math
 \newcommand{\R}{\mathbb{R}}
-\newcommand{\N}{\mathbb{N}}
-\newcommand{\1}{\mathbf{1}}
-\newcommand{\norm}[1]{\left\lVert #1\right\rVert}
+\newcommand{\E}{\mathbb{E}}
 \DeclareMathOperator*{\argmax}{arg\,max}
-\DeclareMathOperator*{\argmin}{arg\,min}
+\newcommand{\lse}{\mathrm{lse}}
 
-% Tight lists
 \usepackage{enumitem}
 \setlist{nosep,leftmargin=2.2em}
 
-% Title / authors
-\title{Embodied Field Intelligence: Safe and Transferable Control from Local Semiring Dynamics}
+\title{Embodied Field Intelligence:\\
+Real-Time Optimal Control from Local Belief and Value Fields}
 \author{\textbf{Joshua Winters}\\
 {\small Independent Researcher}}
 \date{}
@@ -54,412 +46,400 @@
 \maketitle
 
 \begin{abstract}
-We introduce \emph{Embodied Field Intelligence} (EFI), a unified control substrate where behavior emerges from local, cellular–automaton style field dynamics rather than from a centralized planner or monolithic policy network. EFI maintains a small set of spatial fields---attractors (targets, novelty, frontier) and repulsors (visit trail, corner hazard, membranes)---that update via masked diffusion and simple pointwise rules. Actions follow local gradients of a linearly composed potential, optionally biased by a learned spatiotemporal schema. We formalize EFI as a dissipative semigroup of local operators, prove two safety mileposts (a pain–monotonicity property under semiring flips and a barrier–like guarantee induced by a membrane repulsor), and present ablations and learning dynamics. In a stochastic gridworld (\textsc{ForageWorld}), EFI achieves strong returns and robust avoidance with online valence adaptation, and ablations show the visit trail is critical for exploration. We release a reference implementation, diagnostics, and a bench suite with safety, control, and transfer metrics.
+We study an embodied agent constrained to its founding premise: it perceives only a $5{\times}5$ window, carries only internal state, and must act competently in real time with \emph{zero training episodes}. We show that this regime admits a principled architecture built from exactly two local field computations: a \emph{belief field} --- a log-odds Bayes filter over target locations whose prediction step is masked diffusion and whose correction step includes negative evidence --- and a \emph{value field} --- the desirability recursion of a linearly-solvable MDP (LMDP), computed in the log domain as a radius-1 stencil operation, with repulsors entering as state costs and the optimal policy given in closed form as a softmax over neighboring values. This formulation replaces the heuristic potential-field superposition of prior field-based controllers and repairs its known failures: value attenuates \emph{linearly} rather than exponentially with distance (removing the scaling ceiling), aversive stimuli become path costs the planner routes around (rather than subtracted potentials an attractor can outbid), and exploration becomes an expected-information-gain reward computed from belief entropy. A single risk parameter $\lambda$, set continuously by an affect system, subsumes three formerly ad-hoc mechanisms (action temperature, a max-plus ``semiring flip,'' and noise scaling), and infinite state costs yield \emph{exact} barrier guarantees. On a stochastic foraging benchmark the agent attains $0.97$ of a full-observability $A^\ast$ oracle's normalized score with zero training, against $0.50$ for a memoryless greedy agent and $-0.02$ for tabular Q-learning after $2{,}000$ training episodes; success is scale-invariant ($98.9\%$ at both $15{\times}15$ and $30{\times}30$). Because cognition is an amortized fixed-point computation, thinking is measurable: performance collapses at zero sweeps per tick and the agent's reaction latency to a revealed stimulus at distance $d$ fits $0.99\,d/\kappa$ ticks ($R^2=0.999$) --- an internal ``speed of thought'' of one cell per sweep, which doubles as a falsifiable locality certificate. In pre-registered non-stationarity experiments the agent re-values a swapped reward in $5$ steps (baselines: $69$--$83$) and is the only contender with positive return under continual regrowth. An egocentric variant with no global position or world-size access matches the world-frame agent via dead reckoning plus window-overlap visual odometry ($13\times$ lower pose drift than dead reckoning alone). Code, tests, and per-figure reproduction commands are included.
 \end{abstract}
 
 \section{Introduction}
-Conventional agents often rely on centralized policies or global value functions. EFI takes a different route: control emerges from the motion and interaction of spatial fields on a grid---\emph{mind as weather}. Each step updates a handful of local fields by seeding from observations, diffusing around known walls, and then composing them into an effective potential whose local gradient picks the next move. This yields (i) interpretability (you can \emph{see} the flow), (ii) safety dials via repulsors and a semiring flip under pain, and (iii) transfer via equivariance and multi‑scale schema.
+Most competent artificial agents are trained: a policy is optimized offline against an environment distribution and then deployed. This paper develops the opposite regime and takes it seriously as a design constraint. Our agent is a closed box with a narrow sensory window and an internal state; everything it knows it must have seen, everything it does must be computed \emph{during its lifetime} by bounded per-tick internal dynamics, and nothing may be learned by gradient descent across episodes. The interest of the regime is twofold. Practically, it is the regime of online adaptation: an agent that never assumed stationarity has nothing to lose when the world changes. Scientifically, it forces a clean answer to the question \emph{what internal quantities are worth computing when computation is local and time is real}.
+
+An earlier line of work on this system --- \emph{Embodied Field Intelligence} (EFI) --- answered with a collection of hand-designed spatial fields: diffused ``scent'' toward observed targets, a repulsive visit trail, novelty and frontier attractors, and hazard repulsors, superposed linearly into a potential whose local gradient selected actions~\citep{khatib1986,brooks1991}. That system was interpretable and cheap, but its own evaluation exposed three structural defects. Its scent gradients attenuated exponentially, so performance peaked at $15{\times}15$ grids and collapsed beyond; its repulsors, being \emph{subtracted potentials}, could always be outbid by a strong attractor, so its safety story was probabilistic at best; and its only learned component measurably hurt returns. We keep the substrate --- everything is still a scalar field updated by radius-1 stencils --- and replace its physics.
+
+The replacement rests on one observation: the two things such an agent needs, an estimate of \emph{what is out there} and a ranking of \emph{what to do about it}, are both fixed points of local operators, and both have exact, classical formulations.
+
+\begin{enumerate}
+\item \textbf{Beliefs are a Bayes filter that was already almost there.} Diffusing a field seeded at observed targets is an informal posterior. Making it a log-odds occupancy filter~\citep{elfes1989,thrun2005} costs one line --- and gains \emph{negative evidence}: observing an empty cell now erases stale belief, which the scent heuristic could never do.
+\item \textbf{Value iteration is literally masked diffusion.} In Todorov's linearly-solvable MDPs~\citep{todorov2006,todorov2009} the desirability $z = e^{V/\lambda}$ satisfies a \emph{linear, local} fixed-point equation: $z(v) = e^{-q(v)/\lambda}\cdot\text{(neighbor average of }z)$. The scent-diffusion loop EFI always ran was an unwitting approximation of optimal control. Running the recursion exactly, in the log domain, converts the architecture's central heuristic into a theorem-backed computation --- and the log-domain readout makes value \emph{linear} in distance, which is what removes the scaling ceiling.
+\end{enumerate}
+
+Everything else in the architecture then falls into place as corollaries. Repulsors (visit trail, hazards, protective membranes, pain) enter the recursion as state costs $q(v)$, which is the mathematically correct way for penalties to shape paths; a cell with $q=\infty$ is an \emph{exact} barrier no attractor can outbid. The LMDP's temperature $\lambda$ is simultaneously the planning risk parameter (its $\lambda\to 0$ limit is the max-plus/worst-case semiring) and the closed-form optimal policy's softmax temperature, so the affect system controls one dial instead of three mechanisms. Exploration stops being a hand-tuned gadget: with calibrated beliefs, per-cell entropy is free, and expected information gain pooled over the sensory window is a reward like any other, injected into the same recursion. And because the value field is a warm-started fixed-point computation, \emph{thinking has units} --- sweeps per tick --- with measurable consequences we exploit throughout the experiments.
 
 \paragraph{Contributions.}
 \begin{enumerate}
-  \item \textbf{EFI architecture.} A compact, environment‑agnostic control substrate built from local field updates and linear potential composition.
-  \item \textbf{Formalization \& safety mileposts.} A precise masked diffusion operator; a per‑step semigroup view; a \emph{pain–monotone} lemma under semiring flips; and a \emph{barrier‑like} guarantee from a membrane repulsor.
-  \item \textbf{Learning \& schema.} Online valence adaptation (reward‑modulated) and a lightweight spatiotemporal schema that biases exploration.
-  \item \textbf{Empirics.} Ablations, alignment between motion and potential gradients, and valence learning trajectories showing rapid, stable B‑avoidance.
+  \item \textbf{A belief--value reformulation of field-based control} (\cref{sec:method}): log-odds Bayes-filter beliefs with negative evidence, and LMDP value iteration computed as a local log-domain field operation with repulsors as state costs and the closed-form softmax policy.
+  \item \textbf{One-dial safety} (\cref{sec:theory}): affect sets $\lambda$; pain-monotone action choice and an \emph{exact} barrier certificate ($q{=}\infty \Rightarrow$ entry probability $0$ for every $\lambda>0$), strengthening the probabilistic guarantees of the potential formulation. Empirically: zero violations in $500$-step adversarial walks across three orders of $\lambda$.
+  \item \textbf{Cognition with units} (\cref{sec:theory,sec:experiments}): real-time control as tracking of a moving fixed point, with a contraction bound validated on-trajectory (100\% of quiescent windows within the bound), thinking-rate curves ($\kappa{=}0$ collapses to $5$--$8\%$ success; $\kappa{\ge}1$ saturates), and a measured internal speed of thought of $1.01$ cells per sweep ($R^2=0.999$) that doubles as a locality regression test.
+  \item \textbf{Empirics with floors and ceilings} (\cref{sec:experiments}): $0.97$ normalized score against an $A^\ast$ oracle at zero training; scale-invariant success; ablations showing the load-bearing component is now the value recursion itself; pre-registered non-stationarity results (revaluation in $5$ steps vs.\ $69$--$83$; the only positive return under regrowth), including an adverse finding we report as prominently as the favorable ones.
+  \item \textbf{Egocentric embodiment} (\cref{sec:ego}): a variant with no access to global position, world size, or ground-truth maps, driven by an efference copy plus window-overlap visual odometry; it matches the world-frame agent and cuts odometry drift $13\times$ under $10\%$ actuation slip.
 \end{enumerate}
 
-See \cref{fig:overview} for a schematic overview of the EFI pipeline.
-
 \section{Related Work}
-EFI touches several lines: cellular automata and local update systems; potential‑field navigation and artificial physics; saliency/novelty mechanisms; control barrier functions for safety; and group‑equivariant structure for transfer. Our aim is to unify these as a \emph{single, embodied substrate} with minimal assumptions and strong interpretability.
+\label{sec:related}
+\textbf{Potential fields and stigmergy.} Artificial potential fields for navigation date to \citet{khatib1986}; their known pathologies (local minima, attractor/repulsor arms races) stem from composing \emph{forces} rather than solving a control problem. Pheromone-like trail memory is classical stigmergy~\citep{dorigo1996}. EFI retains both ingredients but moves them inside a value recursion: trails become transit costs, and the composed field is an optimal value function rather than a superposition heuristic.
 
-% --- Figure: EFI overview ---
-\begin{figure}[t]
-\centering
-\resizebox{\linewidth}{!}{%
-\begin{tikzpicture}[font=\small, node distance=8mm]
-  % Nodes
-  \node[draw,rounded corners,inner sep=3mm, text width=0.25\linewidth] (obs) {Local obs patch ($5{\times}5$)};
-  \node[draw,rounded corners,inner sep=3mm, right=10mm of obs, text width=0.28\linewidth] (seed) {Seed fields on $V$\\Masked diffusion $\mathsf{D}_{K_t}^{\delta,\lambda}$};
-  % masked diffusion merged into seed block to save width
+\textbf{Linearly-solvable optimal control.} Our control law is Todorov's LMDP desirability iteration~\citep{todorov2006,todorov2009}, closely related to path-integral control~\citep{kappen2005} and to entropy-regularized RL. Our contribution is architectural: identifying the desirability recursion as a \emph{drop-in replacement for diffusion} in field-based agents, running it in the log domain on the agent's own believed map, warm-started across ticks, with beliefs supplying the reward injection.
 
-  \node[draw,rounded corners,inner sep=3mm, below=15mm of seed,
-        align=left] (fields) {Fast fields:\\
-    $G^A,G^B$ (attractors)\\
-    $N$ (novelty), $U$ (frontier)\\
-    $V$ (trail), $H_c$ (corner hazard)};
+\textbf{Occupancy grids and probabilistic robotics.} The belief fields are log-odds occupancy filters~\citep{elfes1989,thrun2005}; the egocentric variant's pose maintenance (dead reckoning, window-overlap egomotion estimation, anchor matching) is a deliberately minimal, fully local instance of the classical localization stack.
 
-  \node[draw,rounded corners,inner sep=3mm, right=10mm of seed, align=left] (compose) {Compose potential:\\
-  $P^{\text{base}}=w^A G^A + w^B G^B + w^{\text{nov}}(N+\gamma U) - k^{\text{trail}}V - k^{\text{corner}}H_c$};
+\textbf{Safe control.} Control barrier functions~\citep{ames2017} certify invariance of safe sets. Our discrete analogue is blunt but exact: an infinite state cost makes the closed-form policy's probability of entering the forbidden set identically zero whenever an alternative exists (\cref{prop:barrier}), a property subtracted-potential formulations cannot have.
 
-  \node[draw,rounded corners,inner sep=3mm, below=15mm of compose, align=left] (schema) {Schema bias $B_t\!\ge\!0$\\(tile Oja + slowness)};
+\textbf{Active inference.} The free-energy framing~\citep{friston2010} also couples belief updating, expected information gain, and affect-like precision parameters. EFI can be read as a tractable, non-variational instance: every quantity is a closed-form field update, the epistemic bonus is window-pooled binary entropy, and the precision analogue $\lambda$ has an exact optimal-control semantics. We view the correspondence as convergent structure rather than derivation.
 
-  \node[draw,rounded corners,inner sep=3mm, right=10mm of schema, align=left] (peff) {$P^{\text{eff}} = P^{\text{base}} + B_t$\\
-  \textit{Semiring flip under pain}\\
-  \textit{Temp from trail/pain}};
+\textbf{Learning-based agents.} Against deep and tabular RL~\citep{suttonbarto} our claim is not asymptotic performance but the zero-training operating point and non-stationary robustness (\cref{sec:nonstat}). Neural cellular automata~\citep{mordvintsev2020} learn the field dynamics themselves; our dynamics stay hand-specified and interpretable, and the only learned components (valences, a count-based local world model) are online and gradient-free, in the spirit of~\citet{brooks1991}.
 
-  \node[draw,rounded corners,inner sep=3mm, right=10mm of peff] (action) {Action: $\arg\max$ (or Gumbel)};
+\section{Setting}
+\label{sec:setting}
+\textsc{ForageWorld} is an $H{\times}W$ gridworld with i.i.d.\ walls (density $0.12$), $n_A$ appetitive targets ($r_A{=}{+}1$), $n_B$ aversive targets ($r_B{=}{-}0.8$), step cost $-0.01$ and bump penalty $-0.02$. The agent observes a $5{\times}5$, $4$-channel binary window (walls, $A$, $B$, self); out-of-bounds cells read as walls (impassability is observable, so world extent is discoverable rather than given). Actions are the 4-neighborhood moves. Episodes end at a step cap or when all targets are collected. Non-stationary variants (\cref{sec:nonstat}) add target regrowth, periodic drift, and a mid-episode reward swap. The task is a POMDP; the agent never accesses the world map, the target list, or (in the egocentric variant, \cref{sec:ego}) its own coordinates.
 
-  % Arrows
-  \draw[-{Latex}] (obs) -- (seed);
-  \draw[-{Latex}] (seed) -- (compose);
-  \draw[-{Latex}] (compose) -- (schema);
-  \draw[-{Latex}] (schema) -- (peff);
-  \draw[-{Latex}] (peff) -- (action);
+\section{Method: two fields and a dial}
+\label{sec:method}
+The agent's internal state consists of per-channel belief fields $L^c_t$, a visit trail, a value field $V_t$, a handful of affect scalars, and (optionally) a learned table of local transition rules. One tick runs: \emph{sense} (belief correction), \emph{predict} (belief diffusion), \emph{think} ($\kappa$ value sweeps), \emph{act} (neighbor softmax), \emph{integrate} (efference copy, valence update on pickups). \cref{alg:tick} summarizes; each stage is a radius-1 stencil or a per-cell operation.
 
-  % From fields box
-  \draw[-{Latex}] (fields.east) -- ++(8mm,0) |- (compose.south);
+\subsection{Belief fields: a Bayes filter in log-odds}
+\label{sec:beliefs}
+For each target channel $c\in\{A,B\}$ the agent maintains $L^c(v) = \log \frac{P(\text{target at } v)}{P(\text{no target at } v)}$, initialized at a prior $\ell_0=-4$ ($p\approx0.018$). The \textbf{correction} step adds $\ell_+$ at observed targets and $\ell_-<0$ at cells \emph{observed empty}, clamped to $[-8,8]$; increments ($\pm12$) deliberately exceed the clamp so a single noiseless observation saturates belief in either direction, while the clamp keeps any belief revisable. Negative evidence is the operative difference from scent fields: a disproven peak dies in one glance instead of decaying over hundreds of ticks. The \textbf{prediction} step diffuses the probability map $p=\sigma(L)$ through the agent's \emph{known} walls (masked diffusion; probability mass cannot leak through mapped structure) and relaxes $L$ toward the prior --- uncertainty grows only where the agent is not looking, at a rate gated by the learned world model (\cref{sec:schema}). Composition consumes probabilities weighted by \emph{learned valences} $w^c$ (updated online from experienced pickup rewards), not by environment constants the agent has no right to know.
 
-  % Legend callouts
-  \node[below=2mm of action, align=center] (legend) {Decision follows local gradient of $P^{\text{eff}}$;\\
-  valences $(w^A,w^B)$ update on pickup; temperature rises when oscillating.};
-\end{tikzpicture}%
-}%
-\caption{EFI pipeline: observations seed fields, masked diffusion enforces wall awareness, linear superposition yields $P^{\text{base}}$, schema adds slow bias $B_t$, and the agent follows the local gradient of $P^{\text{eff}}$. Safety comes from repulsors, a semiring flip under pain, and capped temperature.}
-\label{fig:overview}
-\end{figure}
-
-\section{EFI in One Page}
-We operate on a grid $V=\{0,\dots,H-1\}\times\{0,\dots,W-1\}$ with 4‑neighborhood $\mathcal{N}$. The environment is partially observed via a local window, so the task is a POMDP. EFI maintains fast fields over $V$: attractors $G_t^A,G_t^B,N_t$ (targets A/B, novelty), helper $U_t$ (frontier), repulsors $V_t,H_c$ (visit trail, corner hazard), and monotone sets $K_t$ (known walls), $S_t$ (seen). See \cref{sec:math} for full details.
-
-\paragraph{Masked diffusion.} For mask $M\subseteq V$ (e.g., known walls), rate $\delta\!\in\![0,1]$, decay $\lambda\!\in\![0,1]$, and array $F$:
+\subsection{Value as a local fixed point}
+\label{sec:value}
+Let $q(v)\ge0$ collect state costs (per-step effort $q_{\text{step}}$, trail transit cost, hazard shells, membrane, pain, and $|w^c|\,p^c(v)$ for channels with \emph{negative} learned valence) and let $R(v)$ collect expected arrival rewards ($w^c p^c(v)$ for positive-valence channels, plus the epistemic bonus of \cref{sec:infogain}; the belief prior supplies a small optimism floor everywhere --- unexplored cells might pay at prior rate). For an LMDP with uniform passive dynamics over passable neighbors $N(v)$, the desirability $z=e^{V/\lambda}$ satisfies a linear local fixed-point equation; in the log domain one sweep is
 \begin{equation}
-\mathsf{D}^{\delta,\lambda}_{M}(F)
-=(1-\lambda)\Big[(1-\delta)F + \delta\,\mathsf{A}_M(F)\Big],\quad
-(\mathsf{D}^{\delta,\lambda}_{M}(F))\big|_{M}=0,
-\label{eq:masked-diff}
+V \;\leftarrow\; \max\!\Big(\underbrace{\lambda\,\log \tfrac{1}{|N(v)|}\!\!\sum_{u\in N(v)}\!\! e^{V(u)/\lambda}}_{\lse_\lambda\text{: neighbor average of } z}, \; R\Big) \;-\; q,
+\qquad V\big|_{\text{walls}} = -\infty,
+\label{eq:sweep}
 \end{equation}
-with $\mathsf{A}_M$ the neighbor average restricted to passable cells.
+implemented with the same 4-shift stencil as the diffusion operator, numerically stable by max-subtraction, with a finite sentinel for $-\infty$. The optimal policy is closed-form~\citep{todorov2006}: $\pi^\ast(v\to u)\propto z(u) = e^{V(u)/\lambda}$, sampled exactly by Gumbel-max over neighbor values --- there is no separate action-selection machinery, no momentum, and no anti-oscillation hack; correct values remove the pathologies those hacks patched.
 
-\paragraph{Potential.} EFI composes an effective potential
-\begin{align}
-P_t^{\text{base}} &= w^A_t G^A_t + w^B_t G^B_t + w^{\text{nov}}\,(N_t+\gamma_t U_t)
- - k^{\text{trail}} V_t - k^{\text{corner}} H_c, \\
-P_t^{\text{eff}} &= P^{\text{base}}_t + B_t,
-\end{align}
-where $B_t\ge 0$ is a schema bias map (learned slow field), and $\gamma_t$ suppresses frontier pull inside strong trails. Actions select a neighbor with maximum $P_t^{\text{eff}}$ (plus optional Gumbel noise at elevated temperature when oscillations are detected).
+Three consequences of \cref{eq:sweep} do real work. \emph{(i) Order of operations.} Rewards are injected \emph{before} costs are charged: arriving somewhere to collect its reward still pays that cell's cost. The reversed order ($\max$ after $-q$) lets a cell's reward erase its own cost; empirically this single transposition was worth a $14\times$ reduction in aversive-target contact and moved mean return from $-1.67$ to $-0.12$ (\cref{sec:ablations}). \emph{(ii) Costs, not negative attractors.} A subtracted repulsor double-counts geometry and loses any bidding war against a sufficiently strong attractor; a state cost is charged along the planner's own path and, at $q=\infty$, cannot be outbid at any price (\cref{prop:barrier}). Cost weights are accordingly small ($q_{\text{trail}}=0.08$ versus the legacy potential weight $0.6$, which as a path cost would price a corridor above the total available reward and trap the agent behind its own trail). \emph{(iii) Warm starts.} $V_t$ persists across ticks; each tick runs $\kappa$ sweeps (default 3; $H{+}W$ once at episode start --- the agent orients before moving). Real-time viability rests on the contraction property analyzed in \cref{sec:theory}.
 
-\paragraph{Semiring flip under pain.} When bumps/penalties spike a \emph{pain} signal, EFI flips to a max‑plus mode (repulsors dominate) and raises sampling temperature to break oscillations; as pain subsides, temperature cools and small momentum returns.
+\subsection{One dial: affect sets $\lambda$}
+\label{sec:lambda}
+$\lambda$ appears twice in \cref{eq:sweep}'s ecosystem --- as the planning risk parameter and as the policy temperature --- and they are the \emph{same} $\lambda$. Its limits are the old architecture's modes: $\lambda\to0$ turns $\lse_\lambda$ into $\max$ (the tropical/max-plus semiring: worst-case, shortest-path planning) and the policy greedy; large $\lambda$ is diffusive and exploratory. The affect system therefore needs one output:
+\begin{equation}
+\lambda_t = \mathrm{clip}\big(\lambda_0\,(1 + k_a\,\text{arousal}_t - k_p\,\text{pain}_t),\ \lambda_{\min},\lambda_{\max}\big),
+\end{equation}
+replacing the previous temperature schedule, discrete linear$\to$max-plus flip at a pain threshold, and noise cap --- and removing the behavioral cliff at the old threshold (verified by test). Because the LMDP charges a KL control cost of $\lambda\log|N|$ per step, $\lambda$ must be small relative to reward scale; the \emph{reach budget} of a reward $r$ is $d^\ast \approx r/(q_{\text{step}} + \lambda\log 4)$, an explicit dial (defaults: $\lambda_0{=}0.02$, $d^\ast\!\approx\!26$ cells per unit reward) where the old architecture had an implicit exponential ceiling.
 
-\paragraph{Learning.} On A/B pickup, EFI updates $w^A,w^B$ online: $w^A \!\leftarrow\! w^A+\eta_v r_A$ (clip), $w^B \!\leftarrow\! w^B+\eta_v r_B$, driving B’s valence negative when $r_B\!<\!0$. The schema maintains tile‑pooled features and Oja‑style prototypes with slowness penalty.
+\subsection{Exploration as expected information gain}
+\label{sec:infogain}
+Calibrated beliefs make uncertainty a first-class, local quantity: $u(v) = H_2(p^A(v)) + H_2(p^B(v)) + w_{\text{map}}\,[v\ \text{unseen}]$ (binary entropies plus one unresolved occupancy bit; walls carry none). The epistemic reward is its mean over the sensory window centered at $v$ --- ``what I would learn standing there'' --- scaled by an affect-modulated weight, $\beta_t = \beta_0(1+k_c\,\text{arousal})(1-k_f\,\text{pain})$, and injected into \cref{eq:sweep} like any other reward. One principled term replaces the two hand-tuned exploration gadgets (novelty and frontier fields) of the previous system; exploration--exploitation is the single scalar $\beta$, and a frightened agent verifiably stops sightseeing. Self-predicted novelty is deliberately \emph{excluded} from the reward channel: prediction error deposited at the agent's own trailing cells, if injected as an absorbing reward, makes the agent plan back to where it just was --- a self-trap that in early experiments drove $30{\times}30$ success to $0\%$.
 
-\section{Theory Mileposts}
+\subsection{A world model that earns its keep}
+\label{sec:schema}
+The only learned structure beyond scalar valences is a count-based table of local transition rules, mapping each ($3{\times}3{\times}4$-channel neighborhood, action) pair to counts over the cell's next state, updated from the overlap of consecutive windows ($\sim$9 cells per tick), with every 10th transition held out for scoring. It replaces its Oja/BCM predecessor --- which had no defined objective and measurably reduced returns --- with three defined jobs: its prediction error \emph{is} the surprise signal driving arousal (unfamiliar contexts score maximal surprise, so novelty is arousing before any rule exists); its \emph{static-confidence} (fraction of confident predictions where the world, excluding the agent's own channel, did not change) gates the belief prediction step, so memory stops blurring exactly when the world is learned to be static; and rolled forward with sensors detached it is a primitive imagination. In a static world it reaches $100\%$ held-out accuracy and static-confidence $1.0$ within two episodes ($995$ rules), learns uniform structure in one shot, and passes the return-neutrality gate its predecessor failed.
+
+\begin{algorithm}[t]
+\caption{One EFI tick (all operations radius-1 stencils or per-cell).}
+\label{alg:tick}
+\begin{algorithmic}[1]
+\State \textbf{sense:} correct $L^c$ from the window ($\ell_+$ at targets, $\ell_-$ at observed-empty cells); map walls
+\State \textbf{predict:} diffuse $p^c{=}\sigma(L^c)$ through known walls; relax toward prior (both gated by static-confidence)
+\State \textbf{model:} update transition counts from consecutive-window overlap; emit surprise
+\State \textbf{affect:} update pain/arousal (EWMA of nociception, surprise, reward); set $\lambda_t$, $\beta_t$, membrane radius
+\State \textbf{compose:} $q \gets q_{\text{step}} + \text{trail} + \text{hazards} + \text{membrane} + \sum_{w^c<0}|w^c|p^c$;\quad $R \gets \sum_{w^c\ge0} w^c p^c + \beta_t\,\overline{u}$
+\State \textbf{think:} $\kappa$ sweeps of \cref{eq:sweep}, warm-started; forbidden cells ($q{=}\infty$) held at $-\infty$
+\State \textbf{act:} sample $a \propto e^{V(u)/\lambda_t}$ over open neighbors; step environment
+\State \textbf{integrate:} efference copy $\to$ pose (\cref{sec:ego}); on pickup: valence update, belief collapse at the cell
+\end{algorithmic}
+\end{algorithm}
+
+\section{Theory}
 \label{sec:theory}
+Proofs are elementary; their value is that they attach exactly to the implemented operators (each is enforced by a unit test).
 
-\paragraph{Pain–monotone local choice (safety lemma).}
-Let $\mathsf{Pain}(y,x)\in[0,1]$ be a local repulsor term inside $P_t^{\text{eff}}$; assume nonnegative repulsor weights and that under a pain spike the controller flips to a max‑plus rule that strictly prioritizes lower‑pain neighbors.\footnote{This is realized by (i) nonnegative weights on repulsors, (ii) a large additive penalty on backtracking during oscillations, and (iii) temperature that only injects bounded Gumbel noise.}
-\begin{lemma}[Pain‑monotonicity]
-\label{lem:pain-monotone}
-There exists $\varepsilon\!\ge\!0$ (determined by the noise cap) such that the chosen next cell satisfies
-$\mathsf{Pain}(y_{t+1},x_{t+1}) \le \min_{(y',x')\in\mathcal{N}(y_t,x_t)} \mathsf{Pain}(y',x') + \varepsilon.$
-\end{lemma}
-\begin{proof}[Sketch]
-Under the flip, the selection rule ranks neighbors by a monotone transform of $-\mathsf{Pain}$ plus bounded noise. With nonnegative repulsor weights, the order is preserved up to an $\varepsilon$ perturbation, so the argmax cannot move to a neighbor whose pain is more than $\varepsilon$ above the local minimum.\qedhere
-\end{proof}
-
-\paragraph{Barrier‑like guarantee from a membrane.}
-Let $\mathcal{F}\subset V$ be a forbidden set (e.g., wall‑prox cells or soft hazards) and $M$ a membrane repulsor that places radius‑$R$ shells around $\mathcal{F}$ with weight $w_{\text{mem}}$.
-\begin{proposition}[Discrete control barrier]
-\label{prop:barrier}
-If $w_{\text{mem}}$ exceeds the maximum net attractor pull into $\mathcal{F}$ in a one‑step neighborhood (accounting for schema bias and trail decay), then the greedy action on $P_t^{\text{eff}}$ will not enter $\mathcal{F}$, except with probability bounded by the capped temperature’s mass for crossing moves.
+\begin{proposition}[Linear attenuation and reach]
+\label{prop:linear}
+Along a corridor of degree $n$ with uniform cost $c$, the fixed point of \cref{eq:sweep} satisfies $V(d) = r - \alpha d$ with $c \le \alpha \le c + \lambda\log n$ up to transverse-mode corrections; in particular $\|\nabla V\|$ is independent of $d$ within the reach budget $d^\ast = r/\alpha$.
 \end{proposition}
-\begin{proof}[Sketch]
-The membrane adds a non‑penetration penalty that dominates local attractors; diffusion ensures the penalty decays away from $\mathcal{F}$, so moves along the barrier crest are energetically favored. With temperature capped, only a bounded probability of barrier violation remains.
+\noindent In $z$-space attenuation is exponential ($z(d) \propto e^{-\alpha d/\lambda}$, which underflows and whose gradient vanishes at range --- the scent failure); the log-domain readout is what makes distant rewards steer. Measured: the fitted corridor slope lies in the predicted band, residuals from linearity $<0.01$, and the near/far gradient ratio is $1{\pm}0.5$ over 25 cells.
+
+\begin{proposition}[Exact barrier]
+\label{prop:barrier}
+Let $F$ be a forbidden set with $q|_F=\infty$ (implemented $V|_F = -\text{VBIG}$, excluded from propagation). For every $\lambda>0$ and every state with at least one open neighbor outside $F$, the closed-form policy satisfies $\Pr[\text{enter } F]=0$.
+\end{proposition}
+\begin{proof}
+$\pi^\ast(v\to u)\propto e^{V(u)/\lambda}$ and Gumbel perturbations are a.s.\ finite, so a $-\infty$ score loses to any finite alternative with probability 1. No finite attractor weight can outbid an infinite path cost, unlike a subtracted potential.
 \end{proof}
+\noindent If \emph{all} open neighbors are forbidden the softmax degrades to least-bad and a per-tick deadlock counter records the event, making design violations observable rather than silent. Empirically: zero entries into a membrane ring over $500$-step adversarial walks for $\lambda$ spanning $0.005$ to $0.1$.
+
+\begin{proposition}[Pain-monotone choice]
+\label{prop:pain}
+Write $V = V_0 - w\,q_{\text{pain}}$ with $w>0$. As pain drives $\lambda\to\lambda_{\min}$, the chosen neighbor satisfies $q_{\text{pain}}(u_{\text{chosen}}) \le \min_{u} q_{\text{pain}}(u) + \varepsilon(\lambda_{\min})$ with $\varepsilon(\lambda) = \lambda\,(\Delta G + \Delta V_0)/w \to 0$.
+\end{proposition}
+\noindent The legacy system approximated this with three interacting mechanisms; here it is one limit of one formula, and action-distribution entropy decreases monotonically in pain by construction (verified over the full pain range).
+
+\begin{proposition}[Fixed-point tracking]
+\label{prop:tracking}
+The sweep operator is a contraction on the passable region with rate $\gamma<1$ (any positive $q$ and a reward floor suffice; an enclosed rewardless pocket has fixed point $-\infty$ and is excluded, which the belief-prior optimism floor guarantees in the controller). If the beliefs move the fixed point by at most $\varepsilon$ per tick, $\kappa$ warm-started sweeps track it within $\varepsilon\gamma^{\kappa}/(1-\gamma^{\kappa})$ at steady state.
+\end{proposition}
+\noindent \emph{Real-time cognition, in this architecture, is amortized tracking of a slowly-moving fixed point}, licensed by the temporal coherence of the world (at most one window of evidence arrives per tick). The bound's scope matters: pickups and discoveries \emph{jump} the fixed point discontinuously, and no steady-state bound covers a jump --- the field re-converges at rate $\gamma$ afterward, which is precisely the reaction-latency phenomenon measured in \cref{sec:lightcone}. On-trajectory measurements (\cref{sec:tracking}) validate both the bound and its stated scope.
+
+\begin{remark}[The light cone]
+Every operator in \cref{alg:tick} is a radius-1 stencil iterated a declared number of times, so information propagates through the internal state at most $\kappa$ cells per tick. An agent of this class cannot react to a stimulus at distance $d$ in fewer than ${\sim}d/\kappa$ ticks without prior belief. This is a falsifiable architectural signature --- any cached global shortcut would flatten the latency--distance line --- and we measure it directly in \cref{sec:lightcone}.
+\end{remark}
 
 \section{Experiments}
-\label{sec:expts}
+\label{sec:experiments}
+All experiments use the public implementation; every table and figure lists its reproduction command in \cref{sec:repro}, and each result is also enforced as a pytest gate. Unless stated: $17{\times}17$ grids, $n_A{=}2$, $n_B{=}4$, 200-step episodes, identical environment seed lists across contenders, agents persist (and keep adapting) across an evaluation's episodes. The EFI configuration is identical across all experiments --- no per-task tuning.
 
-\paragraph{Environment.}
-\textsc{ForageWorld} is a random‑walls grid with targets $A$ (positive reward) and $B$ (aversive). Observations are $5{\times}5$ local patches with four channels (walls, A, B, agent). Episodes end at step cap or when all targets are collected.
+\subsection{Floors and ceilings}
+\label{sec:baselines}
+\cref{tab:baselines} evaluates against a random-walk floor, a memoryless greedy-visible agent (``do you even need fields''), tabular Q-learning trained for $2{,}000$ episodes on the same distribution then frozen, and a full-observability $A^\ast$ oracle ceiling (nearest-target tour, replanned each step). Normalized score is $(X-\text{random})/(A^\ast-\text{random})$.
 
-\paragraph{Metrics.}
-We track return, success rate, targets collected, gradient–motion alignment (mean cosine between $\nabla P^{\text{eff}}$ and actual displacement), and safety/control metrics: bumps/100 steps, wall proximity, mean/max pain, backtrack rate, and efficiency. We also record valence snapshots $(w^A,w^B)$ and schema usage.
-
-\paragraph{Controllers.}
-We evaluate both the legacy \texttt{ChemotaxisAgentCA} and the refactored, environment‑agnostic \texttt{FieldController}. They are behaviorally aligned (same field stack and update rules) with the refactor exposing a generic composition API and an adapter layer.
-
-\subsection{Ablations and Learning Dynamics}
-
-\paragraph{Ablation study.}
-Table~\ref{tab:ablation} shows mean return $\pm$~std across conditions. The visit trail is critical; removing it collapses exploration. Novelty helps but is not strictly required for A/B tasks; base‑only control (no trail/novelty/corner/schema) underperforms.
-
-\begin{table}[h!]
+\begin{table}[t]
 \centering
-\caption{Ablation study. Both controllers exhibit near‑identical behavior. Higher is better.}
-\label{tab:ablation}
+\caption{Baselines: 200 episodes/agent (40 episodes $\times$ 5 seeds), identical seeds. EFI reaches $0.97$ of the full-observability ceiling \emph{with zero training}; tabular Q cannot generalize across worlds from raw windows at this budget --- the point of the sample-efficiency comparison.}
+\label{tab:baselines}
 \begin{tabular}{lcccc}
 \toprule
-Condition & \multicolumn{2}{c}{Mean Return $\pm$ std} & A/B ratio & Mean cosine \\
-\cmidrule(lr){2-3}
- & Chemotaxis & FieldController & (Field) & (Field) \\
+Agent & Mean return & Success & Normalized & Training episodes \\
 \midrule
-Full        & $2.25 \pm 1.36$ & $2.95 \pm 1.44$ & $5.00$ & $0.637$ \\
-No Trail    & $-1.65 \pm 0.71$ & $-1.65 \pm 0.71$ & $0.40$ & $0.673$ \\
-No Novelty  & $2.95 \pm 1.60$ & $2.95 \pm 1.60$ & $5.00$ & $0.633$ \\
-Base Only   & $-1.05 \pm 0.91$ & $-1.05 \pm 0.91$ & $1.20$ & $0.076$ \\
+Random walk & $-2.795 \pm 0.909$ & $6.0\%$ & $0.00$ & 0 \\
+Greedy-visible & $-1.386 \pm 0.797$ & $22.5\%$ & $0.50$ & 0 \\
+Tabular Q & $-2.841 \pm 1.546$ & $0.5\%$ & $-0.02$ & 2000 \\
+\textbf{EFI} & $\mathbf{-0.087 \pm 0.286}$ & $\mathbf{96.5\%}$ & $\mathbf{0.97}$ & \textbf{0} \\
+$A^\ast$ oracle (ceiling) & $-0.000 \pm 0.000$ & $100.0\%$ & $1.00$ & 0 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\paragraph{Valence learning.}
-EFI rapidly learns to avoid $B$ (negative valence) while maintaining high $A$ attraction. With learning rate $0.1$, $w^B$ turns negative within $\leq$2 episodes; with $0.3$, it does so immediately. Final valences for the Full model stabilize near $(w^A, w^B, w^{\text{nov}})\approx (1.5, -0.55, 0.7)$.
+\subsection{Scale invariance}
+The legacy potential controller's success drops from $34.4\%$ ($15{\times}15$) to $31.1\%$ ($30{\times}30$) and its historical evaluations peaked at $15{\times}15$; the value-recursion controller scores $\mathbf{98.9\%}$ at \emph{both} sizes (30 episodes $\times$ 3 seeds, step cap $0.9\,HW$), as \cref{prop:linear} predicts --- there is no longer a range mechanism to fail. The remaining size dependence is step cost, not competence.
 
-\paragraph{Alignment.}
-Mean gradient–motion cosine of $\approx 0.63$ indicates actions follow the composed potential’s local gradient, validating the field‑following interpretation.
+\subsection{Ablations: the load-bearing component moved}
+\label{sec:ablations}
+\cref{tab:ablations} ablates the current system ($15{\times}15$, 75 episodes each). Two reversals from the legacy system's ablation story are worth flagging. First, the visit trail --- formerly \emph{the} critical component (its removal collapsed returns to $-1.65$) --- is now nearly dispensable for returns ($97.3\%$ success without it), though it still buys coverage; correct values subsume most of its anti-dithering role. Second, no single field is critical anymore, but replacing the value recursion with the legacy potential composition collapses success to $24\%$: \textbf{the algebra, not any field, is now the load-bearing element}. The epistemic term is the largest single-field contributor ($86.7\%\to98.7\%$ success, and it is what sustains adaptation in \cref{sec:nonstat}); beliefs-vs-scent and the predictive schema are return-neutral here (their value shows under non-stationarity and in the surprise channel, respectively) --- we report this rather than claim otherwise. Separately measured: the reward-injection order of \cref{eq:sweep} is worth $2.07\to0.15$ aversive contacts per episode, and belief fields beat scent by $+0.24$ return under the \emph{legacy} composition (150 episodes), i.e., negative evidence helps even without the new control law.
 
-% --- Figure: Ablation bars ---
+\begin{table}[t]
+\centering
+\caption{Ablations ($15{\times}15$, 25 episodes $\times$ 3 seeds each, shared seeds). Differences among the top rows are within noise; the bottom row is the story.}
+\label{tab:ablations}
+\begin{tabular}{lcccc}
+\toprule
+Configuration & Return & Success & $B$ contacts & Coverage \\
+\midrule
+Full system & $-0.088 \pm 0.256$ & $98.7\%$ & $0.09$ & $67.8\%$ \\
+Epistemic: frontier gadget & $-0.117 \pm 0.283$ & $100.0\%$ & $0.15$ & $68.1\%$ \\
+Epistemic: none & $-0.243 \pm 0.456$ & $86.7\%$ & $0.12$ & $65.3\%$ \\
+No visit trail & $-0.125 \pm 0.345$ & $97.3\%$ & $0.11$ & $46.1\%$ \\
+Scent instead of beliefs & $-0.133 \pm 0.381$ & $97.3\%$ & $0.13$ & $65.7\%$ \\
+Predictive schema off & $-0.117 \pm 0.312$ & $100.0\%$ & $0.15$ & $66.8\%$ \\
+\midrule
+Legacy potential composition & $-1.643 \pm 0.889$ & $24.0\%$ & $0.72$ & $40.7\%$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Thinking has units: the $\kappa$ curves}
+\label{sec:kappa}
+$\kappa$ (value sweeps per tick) is the thinking rate. \cref{fig:kappa} shows its behavioral curve: $\kappa{=}0$ (act on the stale field) collapses to $5$--$8\%$ success; $\kappa{=}1$ already recovers the ceiling. Two honest readings: thinking is load-bearing, and \emph{this} task saturates at one sweep per tick --- warm-started tracking is that effective, so resolving higher $\kappa$ requires harder worlds. The instrument still sees what behavior cannot: the mean per-tick fixed-point residual falls smoothly with $\kappa$ ($0.157 \to 0.017$ from $\kappa{=}1$ to $8$ at $15{\times}15$), exactly as contraction predicts.
+
 \begin{figure}[t]
 \centering
 \begin{tikzpicture}
 \begin{axis}[
-  width=0.95\linewidth,
-  ybar=2pt,
-  bar width=10pt,
-  ymin=-2.4, ymax=3.4,
-  ylabel={Mean return},
-  symbolic x coords={Full,No Trail,No Novelty,Base Only},
-  xtick=data,
-  x tick label style={rotate=10, anchor=east},
-  legend style={at={(0.5,1.02)},anchor=south,legend columns=-1},
-  yminorticks=false,
-  ymajorgrids=true
-]
-\addplot+[error bars/.cd,y dir=both,y explicit]
-coordinates {(Full,2.25)+-(0,1.36) (No Trail,-1.65)+-(0,0.71)
-            (No Novelty,2.95)+-(0,1.60) (Base Only,-1.05)+-(0,0.91)};
-\addlegendentry{ChemotaxisAgentCA}
-
-\addplot+[error bars/.cd,y dir=both,y explicit]
-coordinates {(Full,2.95)+-(0,1.44) (No Trail,-1.65)+-(0,0.71)
-            (No Novelty,2.95)+-(0,1.60) (Base Only,-1.05)+-(0,0.91)};
-\addlegendentry{FieldController}
+  width=0.48\linewidth, height=4.6cm,
+  xlabel={$\kappa$ (sweeps per tick)}, ylabel={success rate},
+  ymin=0, ymax=1.08, xmin=-0.3, xmax=8.3,
+  legend style={at={(0.97,0.4)},anchor=east,font=\footnotesize},
+  ymajorgrids=true]
+\addplot+[mark=*] coordinates {(0,0.05) (1,0.967) (2,0.95) (3,0.983) (5,0.983) (8,0.983)};
+\addlegendentry{$15{\times}15$}
+\addplot+[mark=square*] coordinates {(0,0.083) (1,1.0) (2,1.0) (3,0.967) (5,0.983) (8,0.983)};
+\addlegendentry{$30{\times}30$}
+\end{axis}
+\end{tikzpicture}\hfill
+\begin{tikzpicture}
+\begin{axis}[
+  width=0.48\linewidth, height=4.6cm,
+  xlabel={$\kappa$}, ylabel={mean final residual},
+  ymode=log, xmin=0.7, xmax=8.3,
+  ymajorgrids=true]
+\addplot+[mark=*] coordinates {(1,0.1568) (2,0.0707) (3,0.0469) (5,0.0285) (8,0.0168)};
 \end{axis}
 \end{tikzpicture}
-\caption{Ablation study (bars mirror Table~\ref{tab:ablation}). Visit trail is critical; novelty helps; base‑only underperforms.}
-\label{fig:ablation}
+\caption{Thinking rate. \emph{Left:} success vs.\ $\kappa$ (20 episodes $\times$ 3 seeds per point): $\kappa{=}0$ collapses, $\kappa{\ge}1$ saturates. \emph{Right:} per-tick fixed-point residual falls geometrically with $\kappa$ ($15{\times}15$) --- the contraction is visible even where behavior has saturated.}
+\label{fig:kappa}
 \end{figure}
 
-% --- Figure: Valence learning ---
+\subsection{The tracking bound, on trajectory}
+\label{sec:tracking}
+On an instrumented episode ($15{\times}15$, $\kappa{=}3$; the true fixed point recovered by 200 extra sweeps on frozen inputs every 10 ticks): contraction rate $\hat\gamma = 0.750$ (median per-sweep residual ratio); fixed-point drift $\varepsilon = 0.082$ per window; \cref{prop:tracking} bound $= 0.060$; median measured tracking error $\mathbf{0.0039}$ --- $15\times$ inside the bound --- with \textbf{100\% of quiescent windows within the bound} (11/19). The other 8 windows are belief jumps (pickups, discoveries; drift $>3\times$ median, transient median error $0.13$), where a steady-state bound does not apply by its own hypotheses; we report both counts rather than claim the bound where it has no scope.
+
+\subsection{The speed of thought}
+\label{sec:lightcone}
+We reveal a target at distance $d$ for one tick to a stationary agent and count think-ticks until the exact policy distribution at the agent shifts (KL $>0.1$ nats from baseline). The dynamics are deterministic, so single measurements suffice. \cref{fig:lightcone} shows the result: latency $= 0.99\,(d/\kappa) + 0.17$ with $R^2 = 0.999$ --- an internal speed of thought of $1.01$ cells per sweep, exactly the stencil's light cone; at $\kappa{=}1$, latency literally equals distance. No trained-policy architecture produces a reaction time that is a ruler for stimulus distance; conversely, any non-local shortcut introduced into the internals would flatten this line, so the experiment is kept as a permanent locality regression test.
+
 \begin{figure}[t]
 \centering
 \begin{tikzpicture}
 \begin{axis}[
-  width=0.95\linewidth,
-  xlabel={Episode}, ylabel={$w$},
-  xmin=0, xmax=9, ymin=-1.1, ymax=1.6,
-  legend style={at={(0.02,0.02)},anchor=south west},
-  ymajorgrids=true
-]
-% Learning rate 0.1 (illustrative)
-\addplot+[mark=*] coordinates {(0,0.9) (1,1.5) (2,1.5) (3,1.5) (4,1.5) (5,1.5) (6,1.5) (7,1.5) (8,1.5) (9,1.5)};
-\addlegendentry{$w^A$ (lr=0.1)}
-\addplot+[mark=square*] coordinates {(0,0.02) (1,-0.22) (2,-0.30) (3,-0.30) (4,-0.46) (5,-0.46) (6,-0.46) (7,-0.54) (8,-0.54) (9,-0.54)};
-\addlegendentry{$w^B$ (lr=0.1)}
+  width=0.62\linewidth, height=5.4cm,
+  xlabel={stimulus distance $d$ (cells)}, ylabel={reaction latency (ticks)},
+  xmin=3, xmax=22, ymin=0, ymax=22,
+  legend style={at={(0.03,0.97)},anchor=north west,font=\footnotesize},
+  ymajorgrids=true]
+\addplot+[mark=*] coordinates {(5,5) (10,10) (15,15) (20,20)};
+\addlegendentry{$\kappa=1$}
+\addplot+[mark=square*] coordinates {(5,2) (10,4) (15,5) (20,7)};
+\addlegendentry{$\kappa=3$}
+\addplot+[mark=triangle*] coordinates {(5,1) (10,2) (15,3) (20,4)};
+\addlegendentry{$\kappa=5$}
 \end{axis}
 \end{tikzpicture}
-\caption{Online valence adaptation. $w^B$ becomes negative within $\leq$2 episodes (lr=0.1); $w^A$ saturates near 1.5.}
-\label{fig:valence}
+\caption{The internal light cone: reaction latency to a one-tick stimulus reveal. Fit over all points: latency $=0.99\,(d/\kappa)+0.17$, $R^2=0.999$ --- information moves through the fields at $1.01$ cells per sweep, the theoretical maximum of a radius-1 stencil.}
+\label{fig:lightcone}
 \end{figure}
 
-% --- Figure: Alignment bars ---
-\begin{figure}[t]
+\subsection{Non-stationarity: the pre-registered test of the thesis}
+\label{sec:nonstat}
+A static world cannot demonstrate ``online beats trained.'' We pre-registered three hypotheses (verbatim in the repository, written before running) on three 1000-step conditions: \textbf{regrow} (targets respawn; the episode never depletes), \textbf{drift} (targets teleport within radius 4 every 200 steps), and \textbf{swap} (at step 400, $r_A$ and $r_B$ exchange values). Contenders: EFI (zero training), tabular Q frozen after $2{,}000$ episodes, the same Q continuing to learn online, and greedy-visible; the reference is a clairvoyant $A^\ast$ replanning each step on a clone of the identical stochastic world. 3 seeds $\times$ 3 episodes per cell.
+
+\begin{table}[t]
 \centering
-\begin{tikzpicture}
-\begin{axis}[
-  width=0.95\linewidth,
-  ybar=6pt, bar width=12pt,
-  ylabel={Mean cosine alignment},
-  symbolic x coords={Full,No Trail,No Novelty,Base Only},
-  xtick=data, ymin=0, ymax=0.75,
-  ymajorgrids=true
-]
-\addplot coordinates {(Full,0.637) (No Trail,0.673) (No Novelty,0.633) (Base Only,0.076)};
-\end{axis}
-\end{tikzpicture}
-\caption{Alignment between movement and $\nabla P^{\text{eff}}$. High alignment ($\sim$0.63) indicates field‑following; base‑only collapses.}
-\label{fig:alignment}
-\end{figure}
+\caption{Non-stationarity (1000-step episodes; lag = steps for the 20-step mean reward to re-enter 20\% of its pre-shift level; ``never'' = no recovery within the episode).}
+\label{tab:nonstat}
+\small
+\begin{tabular}{llcccc}
+\toprule
+Condition & Metric & \textbf{EFI} & Q frozen & Q online & Greedy \\
+\midrule
+regrow & return & $\mathbf{+5.51}$ & $-13.02$ & $-11.87$ & $-5.89$ \\
+       & $A$ collected / episode & $\mathbf{16.7}$ & $0.9$ & $3.9$ & $4.1$ \\
+       & regret slope ($\times10^{-2}$) & $\mathbf{2.2}$ & $4.1$ & $4.0$ & $3.4$ \\
+\midrule
+drift  & mean lag (steps) & $\mathbf{46}$ & $67$ & $98$ & $7^{\dagger}$ \\
+       & never recovered (of 36 shifts) & $\mathbf{1}$ & $4$ & $7$ & $7^{\dagger}$ \\
+       & final regret & $1.07$ & $4.63$ & $4.00$ & $\mathbf{0.09}^{\dagger}$ \\
+\midrule
+swap   & adaptation lag (steps) & $\mathbf{5}$ & $75$ & $69$ & $83$ \\
+       & newly-aversive pickups (pre$\to$post) & $\mathbf{1.89\to0.11}$ & --- & --- & --- \\
+       & return & $\mathbf{-6.79}$ & $-18.01$ & $-10.19$ & $-9.29$ \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-\subsection{Safety and Control Diagnostics}
-We run corridor, cul‑de‑sac, and trap‑room diagnostics and track bumps/100, wall proximity, and recovery latency after spikes. The semiring flip suppresses thrashing and the membrane (when enabled) reduces penetration into risky pockets; see \cref{sec:appendix-metrics} for the metric suite and \cref{sec:appendix-risks} for dials.
+\cref{tab:nonstat} summarizes. \textbf{Regrow}: EFI is the only contender in the black ($+5.51$), collecting $4$--$18\times$ more targets --- sustained foraging needs exploration that never goes extinct, which the entropy-regenerating epistemic term provides by construction. \textbf{Swap} is the decisive revaluation result: EFI's behavioral lag is $\mathbf{5}$ steps versus $69$--$83$, and its pickups of the newly-aversive target drop $17\times$ --- once the valence flips (within $\le3$ contacts), a few sweeps re-propagate value under the new reward structure. \emph{Revaluation without relearning} is exactly what separates recomputing values from having memorized them. \textbf{Drift} supports the hypothesis directionally (fewer non-recoveries and $4\times$ lower regret than either Q variant) with an adverse finding we report as pre-committed$^{\dagger}$: memoryless greedy is competitive under drift this local --- radius-4 teleports keep targets near where they were, myopia is cheap, and EFI pays a small curiosity tax (return $-9.07$ vs.\ greedy's $-8.09$). Mild, local drift under-rewards memory; the framing survives, quantified rather than protected.
 
-\subsection{Transfer and Invariance}
-EFI’s masked diffusion, gradient readout, and schema pooling are $D_4$‑equivariant by construction. Invariance tests apply board rotations/flips and check that decisions transform accordingly; multi‑scale fields further improve transfer on large maps (see \cref{sec:appendix-invariance}).
+\subsection{Removing the last cheat: egocentric embodiment}
+\label{sec:ego}
+The world-frame controller, like most gridworld agents, silently reads its own coordinates and the world's dimensions. The egocentric variant removes both (enforced by an AST-level test: no attribute of the environment is touched): fields live on a fixed internal map, pose is dead-reckoned from an efference copy (the only feedback is \emph{did my motor command succeed}), world boundaries are discovered by looking or bumping, and planning runs on the agent's own map with only \emph{known} walls masked --- bumping into undiscovered walls is possible and is how they are mapped. On matched seeds it is indistinguishable from the world-frame agent (return $-1.00\pm0.35$ vs.\ $-1.08\pm0.40$; success $12/12$ vs.\ $11/12$; first-episode protocol) --- removing the GPS costs nothing. Under $10\%$ actuation slip (moves succeed but land on a random neighbor while proprioception reports success), two local mechanisms maintain the pose: \emph{visual odometry} --- the overlap of consecutive windows aligns with the true displacement, detecting slips the tick they occur --- and anchor-based template matching against the internal map for residual drift, scored only on informative cells over intersection-matched supports (both details matter; naive scoring lets uniform terrain or asymmetric visibility outvote the truth). Result: mean pose error $\mathbf{0.42}$ cells vs.\ $5.52$ for dead reckoning alone ($13\times$; worst case $1.75$ vs.\ $10.54$ over 200-step episodes, 12 seeds).
 
-\section{Discussion}
-\textbf{Why it works.} EFI replaces a monolithic policy with a small number of \emph{fast fields} that superpose linearly. Memory and caution arise from the repulsive trail and membranes; curiosity from novelty and frontier; and \emph{naming} of behavior from goal binding and schema. The linear composition keeps influences transparent and debuggable.
+\subsection{Safety dials, verified}
+The exact barrier of \cref{prop:barrier} shows zero entries into a forbidden membrane ring across $500$-step adversarial walks for $\lambda$ spanning $0.005$--$0.1$; action-distribution entropy decreases monotonically in pain (10k-sample estimates across the pain range); and behavior is continuous across the legacy flip threshold (return difference within noise at pain $0.6\pm10^{-3}$). The failure mode that remains --- an agent fully enclosed by its own barrier --- is logged per tick rather than silent.
 
-\textbf{Limitations.} EFI presently operates on discrete grids; extending to continuous control requires gradient‑following motor primitives and actuator models. The schema is intentionally lightweight; richer temporal credit assignment is possible. Finally, the safety lemmas certify \emph{local} guarantees; global safety certificates require further structure.
+\section{Limitations and honest negatives}
+\label{sec:limitations}
+\textbf{Scope.} Everything here is a discrete gridworld with noiseless, occlusion-free windows; continuous state, occlusion, and perceptual noise are untested (the belief machinery accepts soft evidence by construction, but we have not measured it). \textbf{Drift caveat.} Under mild local drift, memoryless greedy matches EFI's return (\cref{sec:nonstat}); the curiosity tax is real. \textbf{Pyramid.} A two-level coarse-to-fine value pyramid provably accelerates cold-start convergence, but used as an every-tick bound it \emph{injects optimism through coarsened walls} and mildly hurt behavior ($100\%\to90\%$ success at $50{\times}50$); it ships default-off as a cold-start accelerator only. We report this negative result because coarse-to-fine value propagation is an obvious next step for others. \textbf{Pose correction} contains drift but cannot fully undo it: evidence written at a wrong pose before the next correction stays in the map; principled repair needs confidence-weighted (deferred) mapping. \textbf{The world model does not yet plan.} Its imagination rollouts are validated but unused by control; anticipatory seeding of the value field is the natural extension. \textbf{Saturation.} ForageWorld cannot resolve $\kappa>1$ or reward the pyramid; harder benchmarks are needed to exercise the machinery this architecture makes measurable. \textbf{No neural components} also means no representation learning: channels (walls, $A$, $B$) are given, not discovered.
 
 \section{Conclusion}
-EFI is a practical, interpretable substrate for embodied control. Local semiring dynamics produce safe exploration and robust avoidance without global planning or heavy learning. The accompanying codebase provides a clean path to multi‑goal curricula, language hooks, multi‑agent fields, and real‑robot interfaces.
+Under the constraint that intelligence must be computed locally, online, and without training, the right internal objects turn out to be classical: a Bayes filter for what is out there and a linearly-solvable value recursion for what to do about it, coupled by a one-parameter risk dial and an entropy-derived curiosity reward. The reformulation keeps everything the field-based approach promised --- full inspectability, per-tick bounded computation, safety by construction --- while replacing its heuristics with quantities that have theorems, and its tuning folklore with dials that have units: a reach budget in cells, a thinking rate in sweeps, a speed of thought measured at $1.01$ cells per sweep against a theoretical bound of $1$. The agent that results is not a better-tuned reactive controller; it is a small, legible optimal-control machine that happens to be built entirely out of the same local field operations the reactive controller used --- evidence that, at least at this scale, the gap between ``emergent field dynamics'' and ``optimal control'' is a change of interpretation, not of substrate.
 
-\paragraph{Artifacts.} Code, CLI, diagnostic suites, and a research site with visualizations are organized under \texttt{efi/} and \texttt{docs/}. Reproduction commands and additional tests are in \cref{sec:repro}.
+\paragraph{Artifacts.} Implementation (\texttt{efi/}), 213 tests including every quantitative gate above, experiment scripts, and data are in the repository; \cref{sec:repro} lists per-result commands.
 
-% -------------------- Reproducibility / How-To --------------------
-\section*{Reproducibility \& What to Run Next}
-\label{sec:repro}
-\textbf{Ablations / baseline}
-\begin{verbatim}
-# Ablation suite (episodes/seeds configurable)
-python cli.py suite --episodes 30 --seeds 5
-\end{verbatim}
-
-\textbf{Scaling / sensitivity}
-\begin{verbatim}
-# Scaling by grid size
-python cli.py eval --H 15 --W 15 --episodes 50
-
-# Diffusion sensitivity
-python cli.py eval --scent-diff 0.10 --episodes 30
-python cli.py eval --scent-diff 0.25 --episodes 30
-\end{verbatim}
-
-\textbf{Plots \& demos}
-\begin{verbatim}
-python scripts/analyze_results.py
-python scripts/export_gif.py --seed 42 --H 25 --W 25 --mode simple --output-dir docs/assets/images
-\end{verbatim}
-
-\textbf{Bench suites \& metrics (safety, control, learning, task).}
-Enable the new metrics in \texttt{evaluation/metrics.py}; add time‑series for pain, arousal, temperature, and semiring mode. Track bumps/100 steps, wall proximity, mean/max pain, distance‑to‑wall; temp vs.\ pain correlation; semiring flip count; recovery latency; valence variance; schema entropy; option usage; return/efficiency/transfer.
-
-\medskip
-\noindent\textbf{Acceptance gates to complete now (commands + thresholds):}
-\begin{enumerate}
-  \item \textbf{Goal binding (M5):} Curriculum with mixed goals; success rate $\ge 85\%$ on held‑out mixes.
-  \begin{verbatim}
-  # Example curriculum evaluation (placeholder flags)
-  python cli.py goals --curriculum mixed --episodes 200 --heldout 1 --seeds 5
-  # Acceptance: mean success >= 0.85, smooth mid-episode goal switch verified
-  \end{verbatim}
-
-  \item \textbf{Language hook (DSL → fields):} Unit tests + e2e with two chained goals.
-  \begin{verbatim}
-  # Unit tests
-  pytest tests/test_goals_dsl.py -q
-  # E2E demo (e.g., "Collect A then Avoid B")
-  python -m efi.agents.goals --program "A>=2; avoid(B)" --episodes 50
-  \end{verbatim}
-
-  \item \textbf{Barrier certificate (membrane):} Prevent entry into a forbidden set except under capped temperature spikes.
-  \begin{verbatim}
-  # Stress test with cul-de-sacs and hot zones
-  python cli.py eval --bench Culdesac --membrane-enabled 1 --w-membrane 0.6 \
-                    --episodes 100 --seeds 5
-  # Acceptance: barrier violations per 1000 steps < target; bumps/100 steps ↓ >= 30%
-  \end{verbatim}
-
-  \item \textbf{Equivariance checks ($D_4$):} Decisions transform with rotations/flips.
-  \begin{verbatim}
-  pytest tests/test_equivariance.py -q
-  # Acceptance: accuracy >= 0.98 on rotated/flipped boards
-  \end{verbatim}
-
-  \item \textbf{Multi-agent fields (preview):} Treat other agents as moving attractor/repulsor sources with learned valence.
-  \begin{verbatim}
-  python cli.py multi --agents 2 --episodes 200 --bench SharedCorridors
-  # Acceptance: collision rate ↓; passing behavior emerges in >= 50% trials
-  \end{verbatim}
-\end{enumerate}
-
-% -------------------- Appendices --------------------
-\appendix
-
-\section{Mathematical Formalization (Condensed)}
-\label{sec:math}
-We collect the main definitions. The grid $V$ and neighbors $\mathcal{N}$ are as in the main text.
-
-\paragraph{Observation and seeding.}
-An observation window of width $\text{win}$ provides four binary channels (walls, A, B, agent). From the patch we seed $G^A,G^B$ by max‑inject with strength $\sigma$ at visible targets.
-
-\paragraph{Masked diffusion.}
-Operator $\mathsf{D}^{\delta,\lambda}_M$ is defined in \cref{eq:masked-diff}. Trails $V_t$ and novelty $N_t$ also diffuse with their own $(\delta,\lambda)$ and decays.
-
-\paragraph{Trail and novelty.}
-\emph{Trail} $V_t$ injects at the current cell (boosted on ping‑pong), decays, and diffuses with small time‑decay; \emph{Novelty} $N_t$ accumulates local prediction error $\varepsilon_t$ (from scent change and patch difference), clamps to $[0,1]$, and diffuses.
-
-\paragraph{Frontier and corner hazard.}
-$U_t$ arises from unseen/non‑wall cells, diffused a few steps; $H_c$ marks cells adjacent to $\ge 2$ true walls.
-
-\paragraph{Schema.}
-Tile the grid; pool features $f_t(y,x)=(G^A,G^B,N,V,H_c,\|\nabla P^\dagger\|)$ into tile vectors $x_{ij}$. Maintain $K$ Oja‑style prototypes with slowness penalty; deposit nonnegative activations into maps $S_k$, diffuse (no walls), and produce bias $B_t=\alpha \sum_k S_k$.
-
-\paragraph{Action selection.}
-Scores $s_t(a)=P_t^{\text{eff}}(y_t,x_t\!+\!d(a))$ with small momentum; no‑backtrack under oscillation; temperature $\tau_t$ rises with strong trail at the current cell. If $\tau_t=0$, choose $\argmax$; else Gumbel sampling with cap.
-
-\paragraph{Online valence learning.}
-On A/B pickup, $w^A \!\leftarrow\! \mathrm{clip}(w^A+\eta_v r_A)$, $w^B \!\leftarrow\! \mathrm{clip}(w^B+\eta_v r_B)$.
-
-\paragraph{Semigroup view.}
-One EFI step composes local operators (seed, diffuse, inject, clamp, schema, compose, sample, env‑step, learn). With decays/clamps/noise it is dissipative, forming a semigroup under composition.
-
-\section{Metrics and Bench Suites}
-\label{sec:appendix-metrics}
-For each episode: return $R{=}\sum r_t$, efficiency $R/T$, counts (A,B), gradient–motion alignment $\overline{\cos}$, coverage, backtrack rate, bumps/100 steps, mean/max pain, wall proximity, distance‑to‑wall; plus valence snapshot $(w^A,w^B)$ and schema usage. Benches:
-\begin{itemize}
-  \item \textbf{Baseline:} random‑walls \textsc{ForageWorld}.
-  \item \textbf{Diagnostics:} \textit{NarrowCorridor}, \textit{Culdesac}, \textit{TrapRooms} (corner density), \textit{SparseA–DenseB}; optional \textit{HotZones} (soft hazard), \textit{SoothingTiles} (healing).
-\end{itemize}
-
-\section{Engineering Notes, Dials, and Risks}
-\label{sec:appendix-risks}
-\textbf{Config \& modules.} New modules: \texttt{affect.py}, \texttt{membrane.py}, \texttt{predict.py}, \texttt{symmetry.py}, \texttt{goals.py}; configs under \texttt{efi/configs/}. \textbf{Dials:} reduce $w_{\text{membrane}}$ or $R_{\text{gain}}$ if over‑cautious; cap pain$\!\to\!$temperature coupling to avoid thrashing; keep modest eligibility in temporal schema to prevent over‑binding.
-
-\section{Invariance and Multi‑Scale}
-\label{sec:appendix-invariance}
-Diffusion, gradients, and frontier construction are $D_4$‑equivariant; schema pooling preserves equivariance if tiles transform consistently. Tests rotate/flip worlds and compare action maps up to the induced transform. Multi‑scale pyramids (two levels to start) improve large‑map efficiency and transfer.
-
-\section{Algorithm (One Step)}
-\label{sec:algorithm}
-\noindent\textbf{EFI step (conceptual).}
-\begin{enumerate}[label=\arabic*.]
-\item Observe local patch; update $K_t,S_t$; seed $G^A,G^B$.
-\item Diffuse $G^A,G^B$ with $\mathsf{D}^{\delta,\lambda}_{K_t}$.
-\item Update trail $V_t$ (inject/decay/diffuse), novelty $N_t$ (error/decay/diffuse).
-\item Compute frontier $U_t$; hazard $H_c$ (episode‑static).
-\item Compose $P^{\text{base}}_t$; update schema and bias $B_t$; form $P^{\text{eff}}_t$.
-\item Select action: momentum/no‑backtrack; temperature from trail/pain; greedy or Gumbel.
-\item Env step; update valences on pickup; repeat.
-\end{enumerate}
-
-\section{Hyperparameters (Quick Starters)}
-\label{sec:appendix-hypers}
-\textbf{Affect \& membrane (Phase 1):} $w_{\text{pain}}=0.7$, pain$\!\to\!$temp gain $0.6$, pain flip threshold $\approx 0.6$; membrane $R_{\min}{=}1.0$, $R_{\text{gain}}{=}1.0\cdot\mathrm{arousal} + 1.5\cdot\mathrm{pain}$, $w_{\text{membrane}}{=}0.6$. \textbf{Schema:} $\text{tile}=5$, $K=4$, $\eta=0.03$, slowness $0.02$, $\alpha_{\text{schema}}=0.35$. \textbf{Symmetry \& scale:} $D_4$ pooling; 2 pyramid levels.
-
-\section{Roadmap and Acceptance Gates}
-\label{sec:appendix-roadmap}
-\textbf{M1 (Week 2–3):} Affect + peripersonal membrane online; $\ge$30\% bumps reduction, returns $\ge$ baseline, tests green. \textbf{M2 (Week 6):} Brain membrane + stable learning (valence variance $\downarrow$25\% under harsh $B$). \textbf{M3 (Week 10–12):} Spatiotemporal schema + predictive novelty. \textbf{M4 (Week 14–16):} Invariance \& multi‑scale; transfer gap $<10\%$. \textbf{M5 (Week 20–24):} Goal binding (+ DSL); $\ge$85\% success on mixed goals; smooth mid‑episode goal switch.
-
-\section*{Ethics Statement}
-EFI introduces simple, interpretable safety dials (membranes, semiring flips) and transparent fields for debugging. We recommend evaluating agents in safety‑focused diagnostics before deployment and reporting barrier violations under temperature spikes.
+\section*{Ethics and reproducibility statement}
+The agent is a gridworld control study; no human data are involved. All headline numbers derive from seeded, deterministic runs with commands below; the non-stationarity hypotheses were written and committed before the experiment ran, and adverse findings (drift caveat, pyramid regression, curiosity tax) are reported alongside favorable ones.
 
 \section*{Acknowledgments}
-The author gratefully acknowledges that OpenAI GPT\textendash 5 was heavily utilized in the creation of this manuscript and supporting artifacts (drafting, editing, code scaffolding, and experiment planning). All design choices, claims, and evaluations were reviewed and verified by the author.
+AI assistants (OpenAI GPT-5; Anthropic Claude) were used heavily for drafting, code scaffolding, experiment execution, and manuscript preparation across this project's lifetime. All designs, claims, and evaluations were reviewed and verified by the author.
+
+% -------------------- Reproducibility --------------------
+\appendix
+\section{Reproduction commands}
+\label{sec:repro}
+\begin{small}
+\begin{verbatim}
+pip install -e .
+pytest -q                    # 213 tests; every claim above has a gate
+
+# Table 1 (baselines, normalized scores)
+python scripts/make_baseline_table.py --episodes 40 --seeds 5 \
+    --q-train-episodes 2000
+
+# Scale invariance + Figure 1 (kappa curves) + tracking bound (Sec. 6.5)
+python scripts/exp_kappa.py --episodes 20 --seeds 3 --deep-verify
+
+# Table 2 (ablations): efi CLI, e.g.
+python cli.py eval --controller field --episodes 25 --seeds 3 \
+    --H 15 --W 15 [--epistemic none|frontier] [--trail 0] [--belief 0]
+
+# Figure 2 (speed of thought)
+python scripts/exp_lightcone.py
+
+# Table 3 (non-stationarity; hypotheses in docs/EXPERIMENTS_NONSTAT.md)
+python scripts/exp_nonstat.py --seeds 3 --episodes 3 --steps 1000
+
+# Egocentric variant (Sec. 6.7)
+python cli.py eval --ego 1 --episodes 10 --seeds 2
+pytest tests/test_egocentric.py -q           # incl. 13x pose-error gate
+\end{verbatim}
+\end{small}
+
+\section{Hyperparameters}
+\label{sec:hypers}
+One configuration for all experiments. Beliefs: $\ell_\pm{=}{\pm}12$ clamped to $[-8,8]$, prior $-4$, diffusion $0.14$/tick, prior-relaxation $0.002$/tick (both gated by static-confidence). Value: $\lambda_0{=}0.02$ ($\lambda\in[0.005,0.1]$, pain gain $0.9$, arousal gain $0.3$), $\kappa{=}3$ ($H{+}W$ on episode start), $q_{\text{step}}{=}0.01$, $q_{\text{trail}}{=}0.08$, $q_{\text{corner}}{=}0.02$, $q_{\text{membrane}}{=}0.3$, $q_{\text{pain}}{=}0.3$, barrier threshold $0.75$. Epistemic: $\beta_0{=}0.3$, curiosity gain $0.5$, fear gain $0.8$, $w_{\text{map}}{=}1$. Valences: init $(1.0, 0.1)$, lr $0.25$, clip $1.5$. Schema: $3{\times}3{\times}4$ neighborhood keys, confidence threshold $0.8$, hold-out every 10th transition. Egocentric: map $129^2$, pose-correction snap margin $+2$, contradiction-triggered search radius $2$ for 3 ticks.
 
 % -------------------- References --------------------
-\begin{thebibliography}{9}\setlength{\itemsep}{0pt}
-\bibitem{brooks1991}
-R. A. Brooks. Intelligence Without Representation. \emph{Artificial Intelligence}, 1991.
+\begin{thebibliography}{19}\setlength{\itemsep}{0pt}
 
-\bibitem{walter2002}
-S. Wolfram. \emph{A New Kind of Science}. Wolfram Media, 2002.
+\bibitem[Ames et al.(2017)]{ames2017}
+A.~D. Ames, X.~Xu, J.~W. Grizzle, and P.~Tabuada.
+Control barrier function based quadratic programs for safety critical systems.
+\emph{IEEE Transactions on Automatic Control}, 62(8):3861--3876, 2017.
 
-\bibitem{oja1982}
-E. Oja. Simplified neuron model as a principal component analyzer. \emph{Journal of Mathematical Biology}, 1982.
+\bibitem[Brooks(1991)]{brooks1991}
+R.~A. Brooks.
+Intelligence without representation.
+\emph{Artificial Intelligence}, 47(1--3):139--159, 1991.
 
-\bibitem{ames2017}
-A. D. Ames et al. Control barrier function based safety-critical control. \emph{IEEE TAC}, 2017.
+\bibitem[Dorigo et al.(1996)]{dorigo1996}
+M.~Dorigo, V.~Maniezzo, and A.~Colorni.
+Ant system: optimization by a colony of cooperating agents.
+\emph{IEEE Transactions on Systems, Man, and Cybernetics B}, 26(1):29--41, 1996.
 
-\bibitem{jang2017}
-E. Jang, S. Gu, B. Poole. Categorical reparameterization with Gumbel–Softmax. \emph{ICLR}, 2017.
+\bibitem[Elfes(1989)]{elfes1989}
+A.~Elfes.
+Using occupancy grids for mobile robot perception and navigation.
+\emph{Computer}, 22(6):46--57, 1989.
 
-\bibitem{cohen2016}
-T. Cohen, M. Welling. Group equivariant convolutional networks. \emph{ICML}, 2016.
+\bibitem[Friston(2010)]{friston2010}
+K.~Friston.
+The free-energy principle: a unified brain theory?
+\emph{Nature Reviews Neuroscience}, 11(2):127--138, 2010.
 
-\bibitem{suttonbarto}
-R. S. Sutton and A. G. Barto. \emph{Reinforcement Learning: An Introduction}. MIT Press, 2018.
+\bibitem[Kappen(2005)]{kappen2005}
+H.~J. Kappen.
+Path integrals and symmetry breaking for optimal control theory.
+\emph{Journal of Statistical Mechanics}, 2005(11):P11011, 2005.
+
+\bibitem[Khatib(1986)]{khatib1986}
+O.~Khatib.
+Real-time obstacle avoidance for manipulators and mobile robots.
+\emph{International Journal of Robotics Research}, 5(1):90--98, 1986.
+
+\bibitem[Mordvintsev et al.(2020)]{mordvintsev2020}
+A.~Mordvintsev, E.~Randazzo, E.~Niklasson, and M.~Levin.
+Growing neural cellular automata.
+\emph{Distill}, 2020. \url{https://distill.pub/2020/growing-ca}.
+
+\bibitem[Sutton and Barto(2018)]{suttonbarto}
+R.~S. Sutton and A.~G. Barto.
+\emph{Reinforcement Learning: An Introduction}.
+MIT Press, 2nd edition, 2018.
+
+\bibitem[Thrun et al.(2005)]{thrun2005}
+S.~Thrun, W.~Burgard, and D.~Fox.
+\emph{Probabilistic Robotics}.
+MIT Press, 2005.
+
+\bibitem[Todorov(2006)]{todorov2006}
+E.~Todorov.
+Linearly-solvable Markov decision problems.
+In \emph{Advances in Neural Information Processing Systems 19}, 2006.
+
+\bibitem[Todorov(2009)]{todorov2009}
+E.~Todorov.
+Efficient computation of optimal actions.
+\emph{Proceedings of the National Academy of Sciences}, 106(28):11478--11483, 2009.
+
 \end{thebibliography}
 
 \end{document}

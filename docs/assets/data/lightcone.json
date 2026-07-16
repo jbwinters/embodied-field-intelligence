@@ -1,0 +1,69 @@
+{
+  "rows": [
+    {
+      "d": 5,
+      "kappa": 1,
+      "latency": 5
+    },
+    {
+      "d": 10,
+      "kappa": 1,
+      "latency": 10
+    },
+    {
+      "d": 15,
+      "kappa": 1,
+      "latency": 15
+    },
+    {
+      "d": 20,
+      "kappa": 1,
+      "latency": 20
+    },
+    {
+      "d": 5,
+      "kappa": 3,
+      "latency": 2
+    },
+    {
+      "d": 10,
+      "kappa": 3,
+      "latency": 4
+    },
+    {
+      "d": 15,
+      "kappa": 3,
+      "latency": 5
+    },
+    {
+      "d": 20,
+      "kappa": 3,
+      "latency": 7
+    },
+    {
+      "d": 5,
+      "kappa": 5,
+      "latency": 1
+    },
+    {
+      "d": 10,
+      "kappa": 5,
+      "latency": 2
+    },
+    {
+      "d": 15,
+      "kappa": 5,
+      "latency": 3
+    },
+    {
+      "d": 20,
+      "kappa": 5,
+      "latency": 4
+    }
+  ],
+  "fit": {
+    "a": 0.990580069410015,
+    "b": 0.17129400099157016,
+    "r2": 0.9986774541735844
+  }
+}

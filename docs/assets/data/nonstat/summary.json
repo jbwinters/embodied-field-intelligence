@@ -1,0 +1,138 @@
+{
+  "protocol": {
+    "seeds": 3,
+    "episodes": 3,
+    "steps": 1000,
+    "q_train_episodes": 2000
+  },
+  "summary": {
+    "regrow": {
+      "efi": {
+        "mean_return": 5.511111111111109,
+        "mean_final_regret": 21.59999999999932,
+        "mean_regret_slope": 0.021802469135801902,
+        "n_shifts": 0,
+        "n_never_recovered": 0,
+        "mean_lag_when_recovered": null,
+        "picks_A": 16.666666666666668,
+        "picks_B": 1.4444444444444444
+      },
+      "q_frozen": {
+        "mean_return": -13.015555555555558,
+        "mean_final_regret": 40.126666666666,
+        "mean_regret_slope": 0.0404592592592587,
+        "n_shifts": 0,
+        "n_never_recovered": 0,
+        "mean_lag_when_recovered": null,
+        "picks_A": 0.8888888888888888,
+        "picks_B": 0.4444444444444444
+      },
+      "q_online": {
+        "mean_return": -11.873333333333337,
+        "mean_final_regret": 38.98444444444374,
+        "mean_regret_slope": 0.0399283950617278,
+        "n_shifts": 0,
+        "n_never_recovered": 0,
+        "mean_lag_when_recovered": null,
+        "picks_A": 3.888888888888889,
+        "picks_B": 5.444444444444445
+      },
+      "greedy": {
+        "mean_return": -5.888888888888889,
+        "mean_final_regret": 32.999999999999346,
+        "mean_regret_slope": 0.03395061728395008,
+        "n_shifts": 0,
+        "n_never_recovered": 0,
+        "mean_lag_when_recovered": null,
+        "picks_A": 4.111111111111111,
+        "picks_B": 0.0
+      }
+    },
+    "drift": {
+      "efi": {
+        "mean_return": -9.066666666666666,
+        "mean_final_regret": 1.0666666666666427,
+        "mean_regret_slope": 0.001185185185185158,
+        "n_shifts": 36,
+        "n_never_recovered": 1,
+        "mean_lag_when_recovered": 45.68571428571428,
+        "picks_A": 2.0,
+        "picks_B": 1.3333333333333333
+      },
+      "q_frozen": {
+        "mean_return": -12.633333333333335,
+        "mean_final_regret": 4.633333333333351,
+        "mean_regret_slope": 0.0044617283950617375,
+        "n_shifts": 36,
+        "n_never_recovered": 4,
+        "mean_lag_when_recovered": 67.0,
+        "picks_A": 0.6666666666666666,
+        "picks_B": 0.5555555555555556
+      },
+      "q_online": {
+        "mean_return": -11.387777777777778,
+        "mean_final_regret": 3.997777777777739,
+        "mean_regret_slope": 0.003837566137566093,
+        "n_shifts": 36,
+        "n_never_recovered": 7,
+        "mean_lag_when_recovered": 97.86206896551724,
+        "picks_A": 2.0,
+        "picks_B": 3.2222222222222223
+      },
+      "greedy": {
+        "mean_return": -8.088888888888889,
+        "mean_final_regret": 0.0888888888888714,
+        "mean_regret_slope": 0.000246913580246894,
+        "n_shifts": 36,
+        "n_never_recovered": 7,
+        "mean_lag_when_recovered": 6.620689655172414,
+        "picks_A": 2.0,
+        "picks_B": 0.1111111111111111
+      }
+    },
+    "swap": {
+      "efi": {
+        "mean_return": -6.787777777777778,
+        "mean_final_regret": 5.088888888888861,
+        "mean_regret_slope": 0.002499999999999945,
+        "n_shifts": 9,
+        "n_never_recovered": 0,
+        "mean_lag_when_recovered": 5.0,
+        "picks_A": 2.0,
+        "picks_B": 2.4444444444444446,
+        "post_swap_picks_A": 0.1111111111111111,
+        "pre_swap_picks_A": 1.8888888888888888
+      },
+      "q_frozen": {
+        "mean_return": -18.00888888888889,
+        "mean_final_regret": 9.008888888888842,
+        "mean_regret_slope": 0.011805555555555463,
+        "n_shifts": 9,
+        "n_never_recovered": 0,
+        "mean_lag_when_recovered": 75.22222222222223,
+        "picks_A": 0.7777777777777778,
+        "picks_B": 0.4444444444444444
+      },
+      "q_online": {
+        "mean_return": -10.193333333333335,
+        "mean_final_regret": 7.597777777777722,
+        "mean_regret_slope": 0.00898888888888876,
+        "n_shifts": 9,
+        "n_never_recovered": 1,
+        "mean_lag_when_recovered": 68.875,
+        "picks_A": 1.6666666666666667,
+        "picks_B": 3.3333333333333335
+      },
+      "greedy": {
+        "mean_return": -9.288888888888888,
+        "mean_final_regret": 5.111111111111079,
+        "mean_regret_slope": 0.00277777777777771,
+        "n_shifts": 9,
+        "n_never_recovered": 0,
+        "mean_lag_when_recovered": 83.33333333333333,
+        "picks_A": 1.1111111111111112,
+        "picks_B": 0.0
+      }
+    }
+  }
+}

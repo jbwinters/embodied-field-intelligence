@@ -52,60 +52,43 @@ def corner_hazard(walls_mask: np.ndarray) -> np.ndarray:
     return (nn >= 2).astype(np.float32)
 
 
-def compute_reachable_frontier(seen: np.ndarray, known_walls: np.ndarray, 
+def compute_reachable_frontier(seen: np.ndarray, known_walls: np.ndarray,
                               y: int, x: int) -> np.ndarray:
     """
     Compute frontier field only for reachable unseen areas.
-    
-    Uses flood-fill from current position to find connected free space,
-    then computes frontier only within that reachable region.
-    
+
+    Reachability by LOCAL max-plus relaxation from the current position
+    (traversing seen, non-wall cells only) -- no flood fill, no global
+    operations; the iteration budget H+W covers the whole grid.
+
     Args:
         seen: Boolean mask of seen cells
         known_walls: Boolean mask of known walls
         y, x: Current agent position
-        
+
     Returns:
         Reachability-aware frontier field
     """
-    from collections import deque
-    
+    from .localdist import BIG, dilate1, maxplus_distance
+
     H, W = seen.shape
-    
-    # Flood-fill to find reachable area from current position
-    reachable = np.zeros_like(seen, dtype=bool)
-    visited = np.zeros_like(seen, dtype=bool)
-    queue = deque([(y, x)])
-    visited[y, x] = True
-    reachable[y, x] = True
-    
-    while queue:
-        cy, cx = queue.popleft()
-        for dy, dx in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-            ny, nx = cy + dy, cx + dx
-            if (0 <= ny < H and 0 <= nx < W and 
-                not visited[ny, nx] and not known_walls[ny, nx] and seen[ny, nx]):
-                # Only traverse through seen areas
-                visited[ny, nx] = True
-                reachable[ny, nx] = True
-                queue.append((ny, nx))
-    
-    # Now find frontier cells: unseen cells adjacent to reachable seen areas
-    frontier_mask = np.zeros_like(seen, dtype=np.float32)
-    for cy in range(H):
-        for cx in range(W):
-            if not seen[cy, cx] and not known_walls[cy, cx]:
-                # Check if adjacent to any reachable cell
-                for dy, dx in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-                    ny, nx = cy + dy, cx + dx
-                    if (0 <= ny < H and 0 <= nx < W and reachable[ny, nx]):
-                        frontier_mask[cy, cx] = 1.0
-                        break
-    
+
+    # Reachable = finite geodesic distance from the agent through seen,
+    # passable space (unseen cells are blocked for traversal).
+    sources = np.zeros((H, W), dtype=bool)
+    sources[y, x] = True
+    blocked = known_walls | (~seen)
+    blocked[y, x] = False  # the agent's own cell is traversable
+    D = maxplus_distance(sources, blocked_mask=blocked, iters=H + W)
+    reachable = D < BIG
+
+    # Frontier: unseen, passable cells adjacent to reachable space.
+    frontier_mask = ((~seen) & (~known_walls) & dilate1(reachable)).astype(np.float32)
+
     # Diffuse to create smooth frontier field
-    frontier = diffuse_masked(frontier_mask, known_walls, 
+    frontier = diffuse_masked(frontier_mask, known_walls,
                             diff=0.15, decay=0.01, steps=3)
-    
+
     return frontier
 
 

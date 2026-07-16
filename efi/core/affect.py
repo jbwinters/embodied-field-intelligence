@@ -129,6 +129,32 @@ def update_affect(
     )
 
 
+def affect_to_lambda(
+    state: AffectState,
+    lam_base: float = 0.02,
+    k_pain: float = 0.9,
+    k_arousal: float = 0.3,
+    lam_min: float = 0.005,
+    lam_max: float = 0.1,
+) -> float:
+    """
+    Map affect to the LMDP risk/temperature parameter lambda.
+
+    This replaces THREE legacy mechanisms with one dial: action temperature
+    (pain_to_temperature), the linear->maxplus semiring flip, and Gumbel
+    noise scaling. lambda -> lam_min is the max-plus / worst-case /
+    near-greedy limit; larger lambda is diffusive and exploratory.
+
+    Pain LOWERS lambda (a hurt agent plans worst-case and acts decisively);
+    arousal raises it mildly (an activated agent explores).
+
+    The same lambda value must be used for BOTH value sweeps and the action
+    softmax -- one source of truth.
+    """
+    lam = lam_base * (1.0 + k_arousal * state.arousal - k_pain * state.pain)
+    return float(np.clip(lam, lam_min, lam_max))
+
+
 def pain_to_temperature(
     base_temp: float,
     pain: float,

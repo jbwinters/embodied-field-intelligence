@@ -1,12 +1,84 @@
 """Agent configuration."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+from .belief_config import BeliefConfig
 
 
 @dataclass
 class AgentConfig:
     """Configuration for ChemotaxisAgentCA."""
-    
+
+    # Belief fields (log-odds Bayes filter replacing raw scent; FieldController only)
+    use_belief_fields: bool = True
+    belief: BeliefConfig = field(default_factory=BeliefConfig)
+
+    # LMDP control: value as a local fixed point of z-iteration (FieldController only)
+    control_mode: str = "lmdp"  # "lmdp" | "legacy" (potential composition)
+    # lam sets BOTH planning risk and action softmax temperature. It must be
+    # small relative to reward scale: the LMDP charges a KL control cost of
+    # lam*log(4) per step, so value reach is ~ r / (q_step + lam*log 4).
+    # lam=0.02 -> reach ~ 26 cells per unit reward.
+    lam_base: float = 0.02
+    z_sweeps: int = 3           # value-iteration sweeps per env tick (kappa)
+    init_sweeps: int = 0        # extra sweeps on the first tick of an episode
+                                # (0 = auto: H+W, "orienting before moving")
+    # State costs, units of reward-per-step. These are PATH costs the
+    # planner routes around -- deliberately milder than the legacy
+    # potential-subtraction weights (a 1.8/step trail cost would price a
+    # corridor above the total reward and trap the agent behind its own path).
+    q_step: float = 0.01        # effort per step (matches env step cost scale)
+    q_trail: float = 0.08       # transit cost of recently visited cells
+    q_corner: float = 0.02
+    q_wall_prox: float = 0.02
+    q_pain: float = 0.3
+    q_membrane: float = 0.3
+
+    # Affect -> lambda (one dial replaces temperature + semiring flip):
+    # pain lowers lambda toward the max-plus/worst-case limit; arousal
+    # raises it mildly. Same lambda drives value sweeps AND action softmax.
+    k_pain_lambda: float = 0.9
+    k_arousal_lambda: float = 0.3
+    lam_min: float = 0.005
+    lam_max: float = 0.1
+
+    # Exact barrier: membrane cells at/above this level get q = +inf
+    # (V = -VBIG), so the softmax selects them with probability exactly 0.
+    barrier_threshold: float = 0.75
+
+    # Epistemic term in the reward injection (lmdp mode):
+    #   "infogain": beta * meanpool_win(belief entropy + map uncertainty),
+    #               affect-modulated (curiosity raises beta, fear lowers it)
+    #   "frontier": legacy diffused-unseen attractor (needs no beliefs)
+    #   "none":     pure exploitation (the honest ablation)
+    epistemic_mode: str = "infogain"
+    beta_epist: float = 0.3
+    k_curiosity: float = 0.5
+    k_fear: float = 0.8
+    w_map_uncertainty: float = 1.0
+
+    # Field pyramid: 1 = single scale (off), 2 = use a half-resolution
+    # level to accelerate the COLD-START convergence at episode start
+    # (coarse sweeps are cheap horizon). Measured: as an every-tick bound
+    # it injects optimism bias through coarsened walls and mildly hurts;
+    # as a one-shot initializer it provably speeds convergence. With
+    # warm-started tracking, steady-state behavior at <=50x50 is already
+    # saturated, so this stays off by default.
+    pyramid_levels: int = 1
+
+    # Schema: "predictive" (count-based local world-rule learner; its error
+    # is the surprise signal, its static-confidence gates belief blur),
+    # "oja" (legacy Oja/BCM prototypes via the runner), or "off".
+    schema_mode: str = "predictive"
+
+    # Egocentric controller: internal map edge (must exceed any world the
+    # agent will meet: 2*64+1 covers 64 steps of travel in any direction
+    # from the starting pose). A production agent would scroll the map.
+    map_size: int = 129
+    # Loop closure: correlate observed walls against the internal map at
+    # +/-1 pose offsets; snap when a shift wins by >= 2 matching cells.
+    pose_correction: bool = True
+
     # Scent field parameters
     seed_strength: float = 1.0  # Stronger scent signal
     scent_diff: float = 0.25    # Much more diffusion for longer range

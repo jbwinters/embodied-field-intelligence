@@ -37,6 +37,9 @@ class ForageWorld:
         self.t = 0
         self.y = 0
         self.x = 0
+        self.reward_A = float(cfg.reward_A)
+        self.reward_B = float(cfg.reward_B)
+        self._respawn_queue = []
 
     def reset(self) -> np.ndarray:
         """
@@ -80,7 +83,82 @@ class ForageWorld:
         self.y, self.x = int(free2[0][i]), int(free2[1][i])
 
         self.t = 0
+        # Dynamic reward values (the swap event flips them mid-episode);
+        # step() and learners must read these, not cfg.
+        self.reward_A = float(self.cfg.reward_A)
+        self.reward_B = float(self.cfg.reward_B)
+        # Pending respawns: list of [delay_remaining, kind]
+        self._respawn_queue = []
         return self._obs()
+
+    def _random_free_cell(self):
+        free = np.where(~self.walls & ~self.TA & ~self.TB)
+        if free[0].size == 0:
+            return None
+        i = self.rng.choice(free[0].size)
+        yy, xx = int(free[0][i]), int(free[1][i])
+        if (yy, xx) == (self.y, self.x):
+            return None  # skip this tick rather than spawn under the agent
+        return yy, xx
+
+    def _apply_nonstationarity(self):
+        """Regrow / drift / swap events. All randomness from self.rng, so
+        schedules are seed-deterministic."""
+        # regrow: tick down pending respawns
+        if self._respawn_queue:
+            still = []
+            for item in self._respawn_queue:
+                item[0] -= 1
+                if item[0] <= 0:
+                    cell = self._random_free_cell()
+                    if cell is None:
+                        item[0] = 1  # try again next tick
+                        still.append(item)
+                        continue
+                    (self.TA if item[1] == "A" else self.TB)[cell] = True
+                else:
+                    still.append(item)
+            self._respawn_queue = still
+
+        # drift: periodic teleport within a Chebyshev ball
+        if self.cfg.T_shift > 0 and self.t % self.cfg.T_shift == 0:
+            for grid in (self.TA, self.TB):
+                for (yy, xx) in np.argwhere(grid):
+                    if self.rng.rand() >= self.cfg.p_move:
+                        continue
+                    r = self.cfg.r_drift
+                    y0, y1 = max(0, yy - r), min(self.H, yy + r + 1)
+                    x0, x1 = max(0, xx - r), min(self.W, xx + r + 1)
+                    region_free = (~self.walls & ~self.TA & ~self.TB)
+                    cand = np.argwhere(region_free[y0:y1, x0:x1])
+                    cand = [(y0 + cy, x0 + cx) for cy, cx in cand
+                            if (y0 + cy, x0 + cx) != (self.y, self.x)]
+                    if cand:
+                        ny, nx = cand[self.rng.choice(len(cand))]
+                        grid[yy, xx] = False
+                        grid[ny, nx] = True
+
+        # swap: one-time reward revaluation
+        if self.cfg.T_swap > 0 and self.t == self.cfg.T_swap:
+            self.reward_A, self.reward_B = self.reward_B, self.reward_A
+
+    def clone(self) -> "ForageWorld":
+        """Deep copy of the full world state INCLUDING rng state, so a
+        clairvoyant reference policy can run the same stochastic world."""
+        other = ForageWorld(self.cfg)
+        other.grid = self.grid.copy()
+        other.walls = self.walls.copy()
+        other.TA = self.TA.copy()
+        other.TB = self.TB.copy()
+        other.t = self.t
+        other.y, other.x = self.y, self.x
+        other.reward_A = getattr(self, "reward_A", float(self.cfg.reward_A))
+        other.reward_B = getattr(self, "reward_B", float(self.cfg.reward_B))
+        other._respawn_queue = [list(item) for item in
+                                getattr(self, "_respawn_queue", [])]
+        other.rng = np.random.RandomState()
+        other.rng.set_state(self.rng.get_state())
+        return other
 
     def _obs(self) -> np.ndarray:
         """
@@ -102,7 +180,12 @@ class ForageWorld:
                     patch[1, py, px] = 1.0 if self.TA[yy, xx] else 0.0
                     patch[2, py, px] = 1.0 if self.TB[yy, xx] else 0.0
                     patch[3, py, px] = 1.0 if (yy == self.y and xx == self.x) else 0.0
-                    
+                else:
+                    # Out-of-bounds is impassable: report it as wall. An
+                    # agent without a priori knowledge of the world size
+                    # must be able to DISCOVER the boundary by looking.
+                    patch[0, py, px] = 1.0
+
         return patch.reshape(-1)
 
     def step(self, a: int) -> Tuple[np.ndarray, float, bool, Dict]:
@@ -116,31 +199,53 @@ class ForageWorld:
             Tuple of (observation, reward, done, info)
         """
         self.t += 1
+        self._apply_nonstationarity()
         dy, dx = [(-1,0),(1,0),(0,-1),(0,1)][int(a)]
         ny, nx = self.y + dy, self.x + dx
         reward = self.cfg.step_cost
         moved = False
         picked = None
-        
+
         if (0 <= ny < self.H) and (0 <= nx < self.W) and (not self.walls[ny, nx]):
+            # Odometry slip (off by default): the move succeeds but lands on
+            # a different passable neighbor. info["moved"] stays True -- the
+            # proprioceptive lie an egocentric agent must detect and correct.
+            p_slip = float(getattr(self.cfg, "p_slip", 0.0))
+            if p_slip > 0.0 and self.rng.rand() < p_slip:
+                alts = []
+                for ddy, ddx in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                    ay, ax = self.y + ddy, self.x + ddx
+                    if (0 <= ay < self.H and 0 <= ax < self.W
+                            and not self.walls[ay, ax] and (ay, ax) != (ny, nx)):
+                        alts.append((ay, ax))
+                if alts:
+                    ny, nx = alts[self.rng.choice(len(alts))]
             self.y, self.x = ny, nx
             moved = True
         else:
             reward += self.cfg.bump_pen
 
-        # Pickup target
+        # Pickup target (dynamic reward values: swap can flip them mid-episode)
         if self.TA[self.y, self.x]:
-            reward += self.cfg.reward_A
+            reward += self.reward_A
             self.TA[self.y, self.x] = False
             picked = "A"
         elif self.TB[self.y, self.x]:
-            reward += self.cfg.reward_B
+            reward += self.reward_B
             self.TB[self.y, self.x] = False
             picked = "B"
 
-        done = (self.t >= self.max_steps) or (not self.TA.any() and not self.TB.any())
+        if picked is not None and self.cfg.p_regrow > 0.0:
+            # Geometric respawn delay, seed-deterministic
+            delay = int(self.rng.geometric(self.cfg.p_regrow))
+            self._respawn_queue.append([delay, picked])
+
+        regrow_on = self.cfg.p_regrow > 0.0
+        collected_all = (not self.TA.any() and not self.TB.any()
+                         and not self._respawn_queue)
+        done = (self.t >= self.max_steps) or (collected_all and not regrow_on)
         info = {"moved": moved, "picked": picked}
-        
+
         return self._obs(), float(reward), bool(done), info
 
     def render_rgb(self) -> np.ndarray:
