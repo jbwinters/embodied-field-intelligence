@@ -612,7 +612,9 @@ def build_parser():
     add_common_args(interactive_parser)
     interactive_parser.add_argument("--auto-play", action="store_true", help="Auto-play on start")
     interactive_parser.add_argument("--html", action="store_true",
-                                    help="Always produce the HTML viewer (skip the matplotlib window)")
+                                    help="(default behavior; kept for compatibility)")
+    interactive_parser.add_argument("--window", action="store_true",
+                                    help="Open the matplotlib desktop window instead of writing HTML")
     
     # ASCII debug mode
     ascii_parser = subparsers.add_parser("ascii", help="Run episode with ASCII visualization")
@@ -753,46 +755,31 @@ def run_interactive(args):
             'targets_B': metrics.targets_collected.get('B', 0)
         }
     
-    # Create and show interactive viewer
+    # Create the viewer. The HTML instrument is the product; the matplotlib
+    # window is an explicit opt-in (--window) because backend detection has
+    # proven unreliable (a resolved lowercase "agg" backend "shows" nothing).
     if episode_data:
-        # Try matplotlib viewer first, fall back to HTML if no display
-        try:
-            import os
-            if getattr(args, "html", False):
-                raise RuntimeError("HTML viewer requested")
-            if not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")):
-                raise RuntimeError("No display")
-            import matplotlib
-            backend = matplotlib.get_backend()
-            if 'Agg' in backend or 'pdf' in backend or 'svg' in backend:
-                # Non-interactive backend, use HTML viewer
-                raise RuntimeError("No display backend")
-                
-            print("[interactive] Launching interactive viewer...")
-            viewer = create_interactive_viewer(episode_data)
-            
-            if args.auto_play:
-                viewer.playing = True
-                viewer.btn_play.label.set_text('Pause')
-                
-            viewer.show()
-            
-        except Exception as e:
-            # Fall back to HTML viewer
-            print("[interactive] No display detected, creating HTML viewer...")
-            out_dir = ensure_dir(args.out or "runs")
-            html_path = create_html_viewer(episode_data, out_dir / f"interactive_{ts()}.html", 
-                                          final_metrics=episode_data.get('final_metrics'))
-            print(f"[interactive] HTML viewer saved to: {html_path}")
-            print(f"[interactive] Open this file in a web browser to interact with the episode")
-            
-            # Try to open in browser if possible
+        if getattr(args, "window", False):
             try:
-                import webbrowser
-                webbrowser.open(f"file://{html_path}")
-                print("[interactive] Attempting to open in default browser...")
-            except:
-                pass
+                print("[interactive] Launching matplotlib window...")
+                viewer = create_interactive_viewer(episode_data)
+                if args.auto_play:
+                    viewer.playing = True
+                    viewer.btn_play.label.set_text('Pause')
+                viewer.show()
+                return
+            except Exception as e:
+                print(f"[interactive] matplotlib window failed ({e}); writing HTML instead")
+
+        import shutil
+        out_dir = ensure_dir(args.out or "runs")
+        html_path = create_html_viewer(episode_data, out_dir / f"interactive_{ts()}.html",
+                                      final_metrics=episode_data.get('final_metrics'))
+        # Stable alias so a local server / bookmark always has the newest run
+        latest = out_dir / "interactive_latest.html"
+        shutil.copyfile(html_path, latest)
+        print(f"[interactive] HTML viewer saved to: {html_path}")
+        print(f"[interactive] Latest alias:         {latest}")
     else:
         print("[interactive] No episode data recorded.")
 
