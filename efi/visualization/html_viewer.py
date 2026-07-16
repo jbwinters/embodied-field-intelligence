@@ -70,10 +70,15 @@ def create_html_viewer(episode_data: dict, output_path: str = "interactive_viewe
             'P_eff': array_to_base64_png(frame.get('P_eff', np.zeros((10,10))), cmap='plasma'),
             'Vtrail': array_to_base64_png(frame.get('Vtrail', np.zeros((10,10))), cmap='Oranges', vmin=0, vmax=1),
             'Novel': array_to_base64_png(frame.get('Novel', np.zeros((10,10))), cmap='Blues', vmin=0, vmax=1),
-            'Ssum': array_to_base64_png(frame.get('Ssum', np.zeros((10,10))), cmap='cividis'),
         }
-        
-        # Add affect fields if present
+
+        # Optional panels: rendered only when the episode carries them
+        if 'Ssum' in frame and np.any(frame['Ssum']):
+            frame_images['Ssum'] = array_to_base64_png(frame['Ssum'], cmap='cividis')
+        if 'Qcost' in frame:
+            frame_images['Qcost'] = array_to_base64_png(frame['Qcost'], cmap='magma')
+        if 'Epistemic' in frame:
+            frame_images['Epistemic'] = array_to_base64_png(frame['Epistemic'], cmap='GnBu')
         if 'Pain' in frame:
             frame_images['Pain'] = array_to_base64_png(frame['Pain'], cmap='Reds', vmin=0, vmax=1)
         if 'Membrane' in frame:
@@ -223,15 +228,15 @@ def create_html_viewer(episode_data: dict, output_path: str = "interactive_viewe
                 <img id="img_world" src="">
             </div>
             <div class="panel">
-                <h3>GA (A scent)</h3>
+                <h3 id="title_GA">GA (A scent)</h3>
                 <img id="img_GA" src="">
             </div>
             <div class="panel">
-                <h3>GB (B scent)</h3>
+                <h3 id="title_GB">GB (B scent)</h3>
                 <img id="img_GB" src="">
             </div>
             <div class="panel">
-                <h3>P_eff (potential)</h3>
+                <h3 id="title_P_eff">P_eff (potential)</h3>
                 <img id="img_P_eff" src="">
             </div>
             <div class="panel">
@@ -239,10 +244,18 @@ def create_html_viewer(episode_data: dict, output_path: str = "interactive_viewe
                 <img id="img_Vtrail" src="">
             </div>
             <div class="panel">
-                <h3>Novelty</h3>
+                <h3 id="title_Novel">Novelty</h3>
                 <img id="img_Novel" src="">
             </div>
-            <div class="panel">
+            <div class="panel" id="qcostPanel" style="display:none">
+                <h3>q (state costs)</h3>
+                <img id="img_Qcost" src="">
+            </div>
+            <div class="panel" id="epistemicPanel" style="display:none">
+                <h3>Epistemic reward (info gain)</h3>
+                <img id="img_Epistemic" src="">
+            </div>
+            <div class="panel" id="ssumPanel" style="display:none">
                 <h3>Schema Sum</h3>
                 <img id="img_Ssum" src="">
             </div>
@@ -276,6 +289,17 @@ def create_html_viewer(episode_data: dict, output_path: str = "interactive_viewe
         // Initialize
         document.getElementById('totalFrames').textContent = frameData.length;
         document.getElementById('frameSlider').max = frameData.length - 1;
+
+        // LMDP episodes (value-recursion controller) carry lambda in the
+        // frame info; retitle the panels to the current model's semantics.
+        const isLMDP = frameData.length > 0 && frameData[0].info
+                       && frameData[0].info.lam !== undefined;
+        if (isLMDP) {
+            document.getElementById('title_GA').textContent = 'p(A) belief';
+            document.getElementById('title_GB').textContent = 'p(B) belief';
+            document.getElementById('title_P_eff').textContent = 'V (value field)';
+            document.getElementById('title_Novel').textContent = 'Novelty (affect input)';
+        }
         
         // Speed slider
         document.getElementById('speedSlider').addEventListener('input', (e) => {
@@ -304,14 +328,18 @@ def create_html_viewer(episode_data: dict, output_path: str = "interactive_viewe
                 if (img) img.src = src;
             }
             
-            // Show/hide affect panels
-            const painPanel = document.getElementById('painPanel');
-            const membranePanel = document.getElementById('membranePanel');
-            if (frame.images.Pain) {
-                painPanel.style.display = 'block';
-            }
-            if (frame.images.Membrane) {
-                membranePanel.style.display = 'block';
+            // Show/hide optional panels
+            const optionalPanels = [
+                ['Pain', 'painPanel'],
+                ['Membrane', 'membranePanel'],
+                ['Qcost', 'qcostPanel'],
+                ['Epistemic', 'epistemicPanel'],
+                ['Ssum', 'ssumPanel'],
+            ];
+            for (const [key, panelId] of optionalPanels) {
+                if (frame.images[key]) {
+                    document.getElementById(panelId).style.display = 'block';
+                }
             }
             
             // Update info
@@ -327,6 +355,20 @@ def create_html_viewer(episode_data: dict, output_path: str = "interactive_viewe
                 `Stuck: ${info.stuck_count || 0}`
             ];
             
+            // LMDP diagnostics if present
+            if (info.valA !== undefined) {
+                infoLines.push(`Valence A: ${info.valA.toFixed(3)}`);
+            }
+            if (info.valB !== undefined) {
+                infoLines.push(`Valence B: ${info.valB.toFixed(3)}`);
+            }
+            if (info.lam !== undefined) {
+                infoLines.push(`lambda: ${info.lam.toFixed(4)}`);
+            }
+            if (info.residual !== undefined) {
+                infoLines.push(`Residual: ${info.residual.toFixed(4)}`);
+            }
+
             // Add affect info if present
             if (info.pain !== undefined) {
                 infoLines.push(`Pain: ${info.pain.toFixed(3)}`);

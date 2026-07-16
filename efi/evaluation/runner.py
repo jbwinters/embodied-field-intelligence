@@ -566,6 +566,19 @@ def run_episode(
                 }
             }
             
+            # LMDP-mode quantities: state costs, epistemic reward, lambda,
+            # and the per-tick fixed-point residual
+            if use_lmdp:
+                if getattr(agent, "last_q", None) is not None:
+                    fields_dict['Qcost'] = agent.last_q.copy()
+                ep_map = getattr(agent, "last_epistemic", None)
+                if ep_map is not None:
+                    fields_dict['Epistemic'] = ep_map.copy()
+                fields_dict['info']['lam'] = float(getattr(agent, "lam_current", agent.lam))
+                res = getattr(agent, "last_residuals", [])
+                if res:
+                    fields_dict['info']['residual'] = float(res[-1])
+
             # Add affect fields if enabled
             if affect_state and agent.cfg.affect_enabled:
                 fields_dict['Pain'] = pain_field_array.copy()

@@ -506,6 +506,7 @@ class FieldController:
         mode = str(getattr(self.cfg, "epistemic_mode", "infogain"))
         if mode == "infogain" and not self.use_beliefs:
             mode = "frontier"  # infogain needs belief fields
+        epistemic = np.zeros((self.H, self.W), dtype=np.float32)
         if mode == "infogain":
             from ..core.infogain import epistemic_beta, pooled_gain, uncertainty_map
             affect = getattr(self, "affect_state", None)
@@ -520,10 +521,14 @@ class FieldController:
                 u = uncertainty_map(self.L["A"], self.L["B"], self.seen,
                                     self.known_walls,
                                     w_map=float(getattr(self.cfg, "w_map_uncertainty", 1.0)))
-                R += beta * pooled_gain(u, self.win)
+                epistemic = beta * pooled_gain(u, self.win)
+                R += epistemic
         elif mode == "frontier":
-            R += float(self.valence.get("Novel", self.cfg.w_novel)) * self.fields["Frontier"]
+            epistemic = (float(self.valence.get("Novel", self.cfg.w_novel))
+                         * self.fields["Frontier"]).astype(np.float32)
+            R += epistemic
         # mode == "none": pure exploitation
+        self.last_epistemic = epistemic  # exposed for visualization
 
         if schema_bias is not None:
             R += np.maximum(schema_bias, 0.0)

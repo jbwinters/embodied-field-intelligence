@@ -22,9 +22,9 @@ from efi.visualization.html_viewer import create_html_viewer
 def add_common_args(parser):
     """Add common arguments to parser."""
     # Controller selection
-    parser.add_argument("--controller", type=str, default="chemotaxis",
+    parser.add_argument("--controller", type=str, default="field",
                        choices=["chemotaxis", "field"],
-                       help="Controller type: chemotaxis (original) or field (generalized)")
+                       help="Controller type: field (current model, default) or chemotaxis (legacy)")
     parser.add_argument("--agent", type=str, default="efi",
                        choices=["efi", "random", "greedy", "astar", "q"],
                        help="efi (default) or a baseline agent (eval mode)")
