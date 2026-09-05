@@ -42,6 +42,13 @@ FIELD_SPECS = [
     ("Ssum",      "schema bias",      "schema bias",     "#7c7f74"),
     ("Pain",      "pain field",       "pain field",      "#e66767"),
     ("Membrane",  "membrane",         "membrane",        "#d95926"),
+    ("Goal", "goal · observed value", "goal · observed value", "#199e70"),
+    ("Object", "object · observed", "object · observed", "#3987e5"),
+    ("ActionValue", "action · predicted value", "action · predicted value", "#c98500"),
+    ("Unresolved", "unresolved · probability", "unresolved · probability", "#e66767"),
+    ("ObjectNext", "object · predicted next", "object · predicted next", "#3987e5"),
+    ("ObjectFuture", "object · forecast horizon", "object · forecast horizon", "#3987e5"),
+    ("BodyNext", "body · predicted next", "body · predicted next", "#f2f3ee"),
 ]
 
 STRIP_SPECS = [
@@ -51,6 +58,8 @@ STRIP_SPECS = [
     ("residual", "value residual", [("residual", "residual", "#3987e5")], 4),
     ("valence",  "valences", [("valA", "w(A)", "#199e70"), ("valB", "w(B)", "#9085e9")], 2),
     ("affect",   "affect", [("pain", "pain", "#e66767"), ("arousal", "arousal", "#d95926")], 2),
+    ("learning", "empirical support", [("learned_transitions", "effective observations", "#3987e5")], 1),
+    ("prediction", "observed effect · log loss", [("prediction_loss", "log loss", "#d55181")], 3),
 ]
 
 
@@ -88,7 +97,8 @@ def build_payload(episode_data: dict, final_metrics: dict = None) -> dict:
     world_frames = episode_data.get("world_frames", [])
     if not frames:
         return None
-    H, W = np.asarray(frames[0]["GA"]).shape
+    first_key = next(key for key, *_ in FIELD_SPECS if key in frames[0])
+    H, W = np.asarray(frames[0][first_key]).shape
     lmdp = "lam" in frames[0].get("info", {})
 
     fields = []
@@ -116,11 +126,14 @@ def build_payload(episode_data: dict, final_metrics: dict = None) -> dict:
     fm = {k: (None if v is None else float(v)) for k, v in fm.items()
           if isinstance(v, (int, float)) or v is None}
 
-    return {
+    payload = {
         "H": int(H), "W": int(W), "n": len(frames), "lmdp": bool(lmdp),
         "fields": fields, "world": world, "walls": walls, "info": info,
         "final": fm,
     }
+    if episode_data.get("title"):
+        payload["title"] = str(episode_data["title"])
+    return payload
 
 
 # ----------------------------------------------------------------------
@@ -336,6 +349,14 @@ function wallAt(t, y, x) {
 }
 
 function policyAt(t) {
+  // A controller with joint consequences supplies its ACTUAL distribution.
+  // Preserve the original value-derived fallback for earlier recordings.
+  const recorded = D.info[t];
+  if (recorded && Object.prototype.hasOwnProperty.call(recorded, 'policy')) {
+    if (!recorded.policy || !recorded.pos) return null;
+    return {probs: recorded.policy,
+            dirs: [[-1,0],[1,0],[0,-1],[0,1],[0,0]], pos: recorded.pos};
+  }
   // pi(a) proportional to exp(V(u)/lambda) over open neighbors -- the
   // closed-form LMDP policy, recomputed from the shipped value field.
   const vf = D.fields.find(f => f.key === 'P_eff');
@@ -371,9 +392,11 @@ function drawWorld(t) {
     worldCtx.strokeStyle = 'rgba(242,243,238,0.55)';
     worldCtx.lineWidth = 2; worldCtx.beginPath();
     for (let k = 0; k <= t; k++) {
+      if (D.info[t].scene !== undefined && D.info[k].scene !== D.info[t].scene) continue;
       const pos = D.info[k] && D.info[k].pos; if (!pos) continue;
       const cx = pos[1] * CELL + CELL / 2, cy = pos[0] * CELL + CELL / 2;
-      k === 0 ? worldCtx.moveTo(cx, cy) : worldCtx.lineTo(cx, cy);
+      const newScene = k === 0 || D.info[k].scene !== D.info[k - 1].scene;
+      newScene ? worldCtx.moveTo(cx, cy) : worldCtx.lineTo(cx, cy);
     }
     worldCtx.stroke();
   }
@@ -381,6 +404,11 @@ function drawWorld(t) {
   if (pos) {
     worldCtx.strokeStyle = '#f2f3ee'; worldCtx.lineWidth = 2;
     worldCtx.strokeRect(pos[1] * CELL + 1, pos[0] * CELL + 1, CELL - 2, CELL - 2);
+  }
+  // Optional sensed goal paint can remain visible under an interactive object.
+  for (const [y,x] of (D.info[t].goal_markers || [])) {
+    worldCtx.strokeStyle = '#199e70'; worldCtx.lineWidth = 2;
+    worldCtx.strokeRect(x * CELL + 2, y * CELL + 2, CELL - 4, CELL - 4);
   }
   if (S.showPolicy) {
     const pol = policyAt(t);
@@ -391,6 +419,10 @@ function drawWorld(t) {
         const p = pol.probs[i]; if (p < 0.01) return;
         const len = CELL * (0.5 + 2.2 * p);
         worldCtx.strokeStyle = '#c98500'; worldCtx.lineWidth = 2.5;
+        if (dy === 0 && dx === 0) {
+          worldCtx.beginPath(); worldCtx.arc(cx, cy, 2 + 3*p, 0, 2*Math.PI);
+          worldCtx.stroke(); return;
+        }
         worldCtx.beginPath(); worldCtx.moveTo(cx, cy);
         worldCtx.lineTo(cx + dx * len, cy + dy * len); worldCtx.stroke();
       });
@@ -516,8 +548,12 @@ function drawStrip(st) {
     ctx.strokeStyle = s.hex; ctx.lineWidth = 2; ctx.beginPath();
     let started = false;
     for (let t = 0; t < N; t++) {
-      const v = s.vals[t]; if (v === undefined || v === null) continue;
+      const scene = D.info[t] && D.info[t].scene;
+      if (scene !== undefined && (t === 0 || scene !== D.info[t-1].scene)) started = false;
+      const v = s.vals[t];
+      if (v === undefined || v === null) { if (scene !== undefined) started = false; continue; }
       started ? ctx.lineTo(X(t), Y(v)) : ctx.moveTo(X(t), Y(v)); started = true;
+      if (scene !== undefined) { ctx.fillStyle = s.hex; ctx.fillRect(X(t)-1, Y(v)-1, 2, 2); }
     }
     ctx.stroke();
   }
@@ -662,13 +698,18 @@ window.addEventListener('keydown', e => {
 // ---- render ---------------------------------------------------------
 function render() {
   const info = D.info[S.t] || {};
+  const caption = document.getElementById('episodeCaption');
+  caption.hidden = !info.caption;
+  caption.textContent = info.caption || '';
   drawWorld(S.t);
   for (const p of panels) drawField(p, S.t);
   for (const st of strips) drawStrip(st);
   drawModal();
   renderProbe();
   document.getElementById('seek').value = S.t;
-  let r = `step <b>${String(info.step ?? S.t).padStart(3, '0')}</b>/${N}` +
+  let r = (info.scene !== undefined
+          ? `frame <b>${S.t + 1}</b>/${N} · tick ${info.step ?? 0}`
+          : `step <b>${String(info.step ?? S.t).padStart(3, '0')}</b>/${N}`) +
           ` · R <b>${(info.return ?? 0).toFixed(3)}</b>`;
   if (info.lam !== undefined) r += ` · λ <b>${info.lam.toFixed(4)}</b>`;
   if (info.residual !== undefined) r += ` · resid <b>${info.residual.toFixed(3)}</b>`;
@@ -677,8 +718,10 @@ function render() {
 
 // ---- boot -----------------------------------------------------------
 document.getElementById('runmeta').textContent =
-  `${H}×${W} · ${N} steps · ` +
-  (D.lmdp ? 'value-recursion controller' : 'potential controller');
+  `${H}×${W} · ${N} ${D.info[0].scene !== undefined ? 'frames' : 'steps'} · ` +
+  (D.fields.some(f => f.key === 'ActionValue') ? 'learned interaction fields' :
+    (D.lmdp ? 'value-recursion controller' : 'potential controller'));
+if (D.title) document.title = D.title;
 const finals = document.getElementById('finals');
 const FINAL_LABELS = {coverage: 'coverage', total_return: 'return',
   targets_A: 'A', targets_B: 'B', bumps_per_100: 'bumps/100',
@@ -714,6 +757,7 @@ HTML_SHELL = """<!DOCTYPE html>
     <span class="runmeta" id="runmeta"></span>
     <span class="finals" id="finals"></span>
   </header>
+  <div id="episodeCaption" hidden style="margin:10px 0;color:var(--ink2)"></div>
 
   <div class="transport" role="toolbar" aria-label="Playback">
     <button id="play" aria-pressed="false">Play</button>

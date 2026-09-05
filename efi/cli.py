@@ -640,6 +640,20 @@ def build_parser():
     transfer_parser.add_argument("--seed", type=int, default=5000)
     transfer_parser.add_argument("--horizon", type=int, default=4)
     transfer_parser.add_argument("--out", default="runs/transfer")
+
+    interaction_parser = subparsers.add_parser(
+        "interaction", help="Learn action consequences and test local contact transfer")
+    interaction_parser.add_argument("--seeds", type=int, default=40)
+    interaction_parser.add_argument("--episodes", type=int, default=8)
+    interaction_parser.add_argument("--acquisition", type=int, default=2,
+                                    help="repetitions of 40 balanced local interventions")
+    interaction_parser.add_argument("--seed", type=int, default=10000)
+    interaction_parser.add_argument("--out", default="runs/interaction")
+
+    profile_parser = subparsers.add_parser(
+        "interaction-profile", help="Measure contact pilot CPU latency and peak allocation")
+    profile_parser.add_argument("--episodes", type=int, default=400)
+    profile_parser.add_argument("--out", default="runs/interaction/profile.json")
     
     return parser
 
@@ -1016,6 +1030,22 @@ def main():
                       f"collisions={row['collision']:.1%} return={row['return']:+.3f} "
                       f"steps={row['steps']:.1f}")
         print(f"Crossing results saved to {args.out}")
+    elif args.mode == "interaction":
+        from efi.evaluation.interaction import interaction_experiment, MODES
+        result = interaction_experiment(args.seeds, args.episodes, args.acquisition,
+                                        args.seed, args.out, progress=True)
+        for layout, summary in result["summary"].items():
+            for mode in MODES:
+                row = summary[mode]
+                print(f"[{layout}/{mode}] success={row['success']:.1%} "
+                      f"return={row['return']:+.3f}")
+        print(f"Interaction results and original viewer saved to {args.out}")
+    elif args.mode == "interaction-profile":
+        from efi.evaluation.interaction_profile import profile_interaction
+        result = profile_interaction(args.episodes, args.out)
+        print(f"Latency (ms): {result['latency_ms_percentiles']}")
+        print(f"Memory: {result['memory']}")
+        print(f"Profile saved to {args.out}")
     elif args.mode == "transfer":
         from efi.evaluation.transfer import transfer_experiment, MODES
         result = transfer_experiment(args.seeds, args.episodes, args.acquisition,

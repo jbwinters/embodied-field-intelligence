@@ -1,0 +1,171 @@
+{
+  "created_utc": "2026-09-05T04:36:09.357438+00:00",
+  "implementation_base_commit": "bbb63de01308dd055643d6a0117d478782d56769",
+  "branch": "feat/predictive-field-control",
+  "python": "3.14.4",
+  "dependencies": {
+    "numpy": "2.5.2",
+    "scipy": "1.18.1",
+    "matplotlib": "3.11.1",
+    "pandas": "3.0.5",
+    "Pillow": "12.3.0",
+    "pytest": "9.1.1"
+  },
+  "baseline_suite": {
+    "passed": 240,
+    "expected_failures": 4
+  },
+  "full_suite": {
+    "passed": 263,
+    "expected_failures": 4,
+    "elapsed_seconds": 134.34
+  },
+  "focused_suite_after_final_telemetry": {
+    "passed": 23
+  },
+  "regression_replay": {
+    "foraging": {
+      "target_episodes": 212,
+      "additional_source_episodes": 0,
+      "serialized_results_identical": true,
+      "before_sha256": "a1c8d80f53f0aaaaf5d8cb4175024138fc2aba32183e6a32c30bd4cb9b52d58f",
+      "after_sha256": "a1c8d80f53f0aaaaf5d8cb4175024138fc2aba32183e6a32c30bd4cb9b52d58f"
+    },
+    "crossing": {
+      "target_episodes": 4800,
+      "additional_source_episodes": 0,
+      "serialized_results_identical": true,
+      "before_sha256": "8823459501430ce6aee7c1fedde99b5b67f4d7441efeeb19001c0e56ce0e4e47",
+      "after_sha256": "8823459501430ce6aee7c1fedde99b5b67f4d7441efeeb19001c0e56ce0e4e47"
+    },
+    "motion_transfer": {
+      "target_episodes": 7680,
+      "additional_source_episodes": 400,
+      "serialized_results_identical": true,
+      "before_sha256": "7f169a4991c46fdbbbfbd8aa57509a3b79b13091ac03949fffd854a55783e968",
+      "after_sha256": "7f169a4991c46fdbbbfbd8aa57509a3b79b13091ac03949fffd854a55783e968"
+    }
+  },
+  "new_benchmark": {
+    "held_out_seeds": [
+      10000,
+      10001,
+      10002,
+      10003,
+      10004,
+      10005,
+      10006,
+      10007,
+      10008,
+      10009,
+      10010,
+      10011,
+      10012,
+      10013,
+      10014,
+      10015,
+      10016,
+      10017,
+      10018,
+      10019,
+      10020,
+      10021,
+      10022,
+      10023,
+      10024,
+      10025,
+      10026,
+      10027,
+      10028,
+      10029,
+      10030,
+      10031,
+      10032,
+      10033,
+      10034,
+      10035,
+      10036,
+      10037,
+      10038,
+      10039
+    ],
+    "development_seeds": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "source_transitions": 9600,
+    "additional_common_stream_scoring_replays": 9600,
+    "target_trials": 20160,
+    "source_transitions_per_model": 80,
+    "contact_attempts_per_model": 16,
+    "settings_unchanged_after_held_out_evaluation": true,
+    "repeated_behavior_identical_after_adding_source_cost_telemetry": true
+  },
+  "gates": {
+    "A_behavior_and_prediction": true,
+    "resource_targets_on_recorded_machine": true,
+    "legacy_paths_preserved": true,
+    "B_recurring_context_retention": "not implemented",
+    "C_two_learned_ingredients": "not implemented",
+    "integrated_successor_preservation": "not established",
+    "independent_architectural_advantage": "not established; scalar reducer is a numerical reference"
+  },
+  "checks": [
+    "New Python sources: flake8, 100-column limit, E203 ignored",
+    "Changed/new Python files parse with Python 3.10 grammar",
+    "Native viewer: all 28 recorded five-action policies exactly reproduced; terminal policies absent",
+    "Native viewer: next/previous, play/pause, seeking, modal zoom and pinned probe",
+    "390px viewport: document width 375px, all six fields present, no horizontal overflow",
+    "Current viewer renders 12-step legacy ForageWorld data with original field labels and fallback policy",
+    "Native viewer console: zero errors or warnings",
+    "Chart and selected real-viewer GIF frames visually inspected",
+    "Whitespace checked with repository-compatible space indentation"
+  ],
+  "source_sha256": {
+    "efi/agents/interaction_controller.py": "e9f7775b24b101aebea056aba1daf41f58e1a94f2256cd11982ec43227f308b7",
+    "efi/agents/interaction_schema.py": "aea7f159cf40c44ba1af5cce02799b03f6afe3ef106d26e7b72a5fbfca43fe5f",
+    "efi/cli.py": "ae22acbe4c366a1ebd4596ee854ac678df9212fbda5744db4aa7345f9a275e21",
+    "efi/configs/interaction_config.py": "7e4eacaafd8fd6b178d1b38114d44723db8368811015fefc1c09b53b94a4a1b3",
+    "efi/core/experience.py": "57ab43dd18c058f9857f02d36d14d624463fee1a6840163778bf5815bc861488",
+    "efi/core/interaction.py": "eca8509690a8ae9c88f3d942497868d254e880106a30aa607bb02e928ec1a167",
+    "efi/envs/interaction_world.py": "79dc6a61f5ce589d2dce67760f60289d293872a2306f4c3dd8c853477fb5d3b0",
+    "efi/evaluation/interaction.py": "db0108250b9cef7f2197c3ce3f1809b825b029f44b85a8748bcf6687b0dbe490",
+    "efi/evaluation/interaction_profile.py": "4b84d518320ad494d5fff46594428da10c7d5f35fe705effd13fddfd23294274",
+    "efi/evaluation/interaction_reference.py": "b598a248411bd9bdbf201fc194a85b4ad217203104032bfb33003bcc87c58354",
+    "efi/visualization/html_viewer.py": "3ca08538be17f85405d2c5dbd73a4352c92245182f60c17632d2f5111640344e",
+    "scripts/analyze_interaction.py": "0fbf128ff8f0216a3b33f38b0562533ef8a7a78b8d3b3be9ef7a72b131fae239",
+    "scripts/capture_legacy_regression.py": "e5d8cf068250f65ce8dd5ca77d14bacb110122428a3153a0ffd4d3a30e6b46a1",
+    "scripts/make_viewer_demo.py": "51303f39ec9b7b11428bd8e3ed3b20dcdf9adc61b94d3fc30729ac7d75968bb9",
+    "scripts/plot_interaction.py": "1314b1ca8ffe8ddafeec8097c904f2cd1c39e9eb3c270539002317014214a4b2",
+    "tests/test_interaction.py": "515d8c1fbe6625c13bacde3f14104fb776781462ebd02273668f7e7017648b58",
+    "tests/test_interaction_viewer.py": "a536164daaead01fee8e8cf18c1b77c95c58a297e1e5d2b6b79b83bab606e601"
+  },
+  "data_sha256": {
+    "docs/assets/data/interaction/analysis.json": "aa5f412588c831369d19112d64fe53297d3f5f3cd56f796ac89d2abe587bb91f",
+    "docs/assets/data/interaction/episode.json": "4bb9d4d7c3681e572d34726fdd8a204e99b98951e2f11c1328fbaf316fbdc73d",
+    "docs/assets/data/interaction/profile.json": "28cf55ffbbf099565311abc3b10ae7a749d6268e71c4911ecc9ab7ca8eeb1648",
+    "docs/assets/data/interaction/results.json": "5f5f4ae3e01dd255ba2880cdec39210a02c279ab931b709018f8c1a419c6b71f",
+    "docs/assets/data/interaction/summary.json": "3f236dc044e82b8814cb6715d096521a2b2952f74aa53c4f130e81031e672878"
+  },
+  "visual_sha256": {
+    "docs/assets/images/interaction_learning.png": "7d21a8b056a9eb0d8640f1231f8365fce664e0c85a31fdbb3051479feabe5764",
+    "docs/assets/images/interaction_viewer.gif": "6051649e27ae983096a91b596a40538d4115734bfb613c1d637e28466c5d6963",
+    "docs/assets/interactive/interaction.html": "f3850b3cb3f044b66cd83277faecb84c07337e39af5a027768a631fd5f917da7"
+  },
+  "viewer_animation": {
+    "frames": 28,
+    "width": 1000,
+    "height": 1018,
+    "fps": 1.5,
+    "frame_disposal": 2,
+    "max_mean_absolute_quantization_error_rgb_255": 0.31035199738048463
+  }
+}

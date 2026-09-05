@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](pyproject.toml)
 
-A framework for embodied artificial intelligence from local field dynamics: an agent with a 5×5 window and internal state only, controlled by Bayes-filter belief fields and a linearly-solvable-MDP value recursion — zero training episodes.
+A framework for embodied artificial intelligence from local field dynamics. The original foraging controller uses a 5×5 window, internal belief fields, and a linearly-solvable-MDP value recursion with zero training episodes. Newer pilots learn motion and contact consequences from online experience.
 
 ![A 35×35 foraging run: the agent collects every appetitive target while threading between twenty aversive ones](docs/assets/images/grid_demo.gif)
 
@@ -20,7 +20,34 @@ The episode below runs that viewer through the revaluation experiment: at step 3
 
 *25×25, regrowing targets, reward swap at step 300 (`python scripts/make_swap_demo.py`). This is the revaluation experiment from the paper (adaptation lag 5 steps vs 69–83 for trained baselines), playing live.*
 
+### Watch experience change an approach
+
+The new contact pilot learns how an object responds to contact, then uses
+joint body/object predictions to approach it from a useful direction.
+Across 40 held-out seeds, acquired evidence plus online learning achieves
+**93.65% / 92.40%** goal collection in two rearrangements, versus
+**66.46% / 65.83%** with empty evidence. Acquisition costs 80 real transitions
+per model, including 16 contact attempts. This is a bounded, opt-in milestone;
+the [full report](docs/INTERACTION_LEARNING.md) includes negative controls
+and the supplied-versus-learned boundary.
+
+![Learned contact consequences, shown in the original EFI episode viewer](docs/assets/images/interaction_viewer.gif)
+
+*The original viewer shows actual fields and five-action probabilities.
+[Open the replay](docs/assets/interactive/interaction.html), or generate it
+with `python cli.py interaction`. Two source contacts and the first selected
+target attempts are shown; omitted source interventions are labeled.*
+
 ## Overview
+
+The proposed next architecture is described in
+[A field architecture for accumulating online intelligence](docs/ONLINE_INTELLIGENCE_DESIGN.md).
+It develops learned action consequences, contextual memory, and composition
+under explicit CPU, memory, and locality budgets. Its first contact pilot
+is documented in the [interaction-learning report](docs/INTERACTION_LEARNING.md).
+Earlier demonstrated capabilities remain documented in the
+[predictive control](docs/PREDICTIVE_CONTROL.md) and
+[transfer](docs/PREDICTIVE_TRANSFER.md) reports.
 
 EFI explores the use of cellular automata (CA) as a substrate for real-time, distributed intelligence in embodied agents. Behavior emerges from local field dynamics — attractor and repulsor fields updated by masked diffusion and composed into a single potential whose gradient selects actions — rather than from a centralized planner or policy network. The framework combines:
 
