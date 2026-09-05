@@ -1,135 +1,47 @@
-# GitHub Pages Research Site
+# Publish and preview the research site
 
-A complete research website for the Embodied Field Intelligence project has been created in the `docs/` directory.
+The site uses the existing `docs/index.html`, CSS, charts, and standalone
+HTML viewers. No separate app build is required. See the
+[documentation index](README.md) for recordings and research reports.
 
-## 📊 What's Included
+## Preview a checkout
 
-### 1. **Complete Research Website** (`docs/index.html`)
-- Professional landing page with hero section and demo GIF
-- Technical approach explanation with field dynamics
-- Interactive charts showing experimental results
-- Code examples and future directions
-
-### 2. **Data Analysis**
-- **Baseline Performance**: Multi-seed evaluation showing agent consistency
-- **Ablation Study**: Component-wise analysis showing each field's contribution
-- **Scaling Analysis**: Performance across different grid sizes (10×10 to 30×30)
-- **Parameter Sensitivity**: Optimal diffusion rate identification
-
-### 3. **Visualizations**
-- Animated GIF demos of agent navigation
-- Interactive charts using Chart.js
-- Performance comparison graphs
-- Statistical analysis plots
-
-## 📈 Key Findings from Analysis
-
-1. **Field Contributions** (Ablation Study):
-   - Full model: -0.92 ± 0.95 return
-   - Without trail (worst): -2.00 ± 0.00 return
-   - Without novelty: -0.88 ± 0.95 return
-   - Trail field is critical for exploration
-
-2. **Scaling Performance**:
-   - Performance improves with larger grids
-   - 30×30 grids achieve positive returns (+0.8)
-   - Larger environments provide more navigation opportunities
-
-3. **Parameter Sensitivity**:
-   - Optimal diffusion rate: 0.25
-   - Too low (<0.1): Limited field spread
-   - Too high (>0.3): Loss of gradient precision
-
-## 🚀 Deployment Instructions
-
-### Step 1: Push to GitHub
-```bash
-git add docs/
-git commit -m "Add GitHub Pages research site"
-git push origin main
-```
-
-### Step 2: Enable GitHub Pages
-1. Go to your repository Settings
-2. Navigate to Pages section
-3. Source: Deploy from a branch
-4. Branch: `main` → folder: `/docs`
-5. Save
-
-### Step 3: Access Your Site
-After a few minutes, your site will be live at:
-```
-https://jbwinters.github.io/embodied-field-intelligence/
-```
-
-## 🛠️ Local Testing
+From the repository root:
 
 ```bash
-# Navigate to docs folder
-cd docs/
-
-# Start local server
-python -m http.server 8080
-
-# Open in browser
-# http://localhost:8080
+python -m http.server 8000 --bind 127.0.0.1 --directory docs
 ```
 
-## 📁 File Structure
+Open [localhost:8000](http://localhost:8000/) and follow the **Demos** link.
+The individual HTML players also open directly from disk and work offline.
+The landing page's interactive charts use Chart.js from a CDN; archived
+figures remain visible when that library or the chart data cannot load.
 
-```
-docs/
-├── index.html           # Main research page
-├── _config.yml         # Jekyll configuration
-├── README.md           # Documentation
-└── assets/
-    ├── css/
-    │   └── style.css   # Professional styling
-    ├── js/
-    │   └── main.js     # Interactive charts
-    ├── data/
-    │   └── experiment_summary.json  # Experimental data
-    └── images/
-        ├── efi_simple_*.gif       # Demo animations
-        ├── analysis_charts.png    # Ablation/scaling plots
-        └── sensitivity_plot.png   # Parameter analysis
-```
+## Publish through GitHub Pages
 
-## 🎨 Features
+After the reviewed changes are merged into `main`, configure the repository:
 
-- **Responsive Design**: Works on desktop, tablet, and mobile
-- **Smooth Scrolling**: Navigation with anchor links
-- **Interactive Charts**: Real-time data visualization
-- **Fade-in Animations**: Elements appear as you scroll
-- **Professional Styling**: Modern gradient hero, card layouts
-- **Code Examples**: Syntax-highlighted command snippets
+1. Open **Settings → Pages**.
+2. Select **Deploy from a branch**.
+3. Select the **main** branch and **/docs** folder, then save.
+4. Wait for the Pages deployment to succeed in **Actions**.
 
-## 📝 Customization
+The intended public address is
+[the EFI research site](https://jbwinters.github.io/embodied-field-intelligence/).
+Once deployed, the players are available at
+[the continuous example](https://jbwinters.github.io/embodied-field-intelligence/assets/interactive/interaction_long.html)
+and [the controlled trials](https://jbwinters.github.io/embodied-field-intelligence/assets/interactive/interaction.html).
+A feature branch does not update this deployment. A 404 before deployment
+does not prevent opening the same files locally.
 
-To update the site with new data:
+## Check an update
 
-1. **Run new experiments**:
-```bash
-python scripts/analyze_results.py
-```
+- Follow the landing page's demo links and test playback, seeking, chapter
+  jumps, and a narrow browser window.
+- Confirm that each chart uses its archived data and each research link
+  points to `main`, so deleting a merged feature branch does not break it.
+- After deployment, open both public player URLs and check the Pages job.
 
-2. **Generate new demo GIFs**:
-```bash
-python scripts/export_gif.py --seed 42 --H 25 --W 25 --mode simple --output-dir docs/assets/images
-```
-
-3. **Update content**: Edit `docs/index.html` directly
-
-4. **Modify styling**: Edit `docs/assets/css/style.css`
-
-5. **Change charts**: Edit `docs/assets/js/main.js`
-
-## 🔬 Research Highlights
-
-The site presents EFI as a novel approach to embodied AI that:
-- Uses cellular automata instead of neural networks
-- Implements intelligence through field dynamics
-- Provides interpretable decision-making
-- Achieves continuous adaptation without training phases
-
-Perfect for sharing your research with the community!
+The site contains historical chemotaxis charts as well as newer capability
+reports. Keep those experiment labels intact when replacing artifacts; do
+not substitute illustrative fallback numbers for missing measurements.

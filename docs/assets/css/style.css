@@ -81,6 +81,12 @@ body {
     margin-bottom: 1rem;
 }
 
+.hero a {
+    color: white;
+    font-weight: 600;
+    text-underline-offset: 0.2em;
+}
+
 .subtitle {
     font-size: 1.25rem;
     opacity: 0.9;
@@ -207,6 +213,7 @@ body {
 .equation code {
     font-family: 'Courier New', monospace;
     color: var(--text-dark);
+    overflow-wrap: anywhere;
 }
 
 /* Results */
@@ -227,6 +234,10 @@ body {
 .result-card h3 {
     color: var(--primary-color);
     margin-bottom: 1rem;
+}
+
+.result-card canvas {
+    max-width: 100%;
 }
 
 .chart-caption {
@@ -390,6 +401,11 @@ pre {
 
 /* Responsive */
 @media (max-width: 768px) {
+    .navbar .container {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
     .content-grid {
         grid-template-columns: 1fr;
     }
@@ -399,11 +415,23 @@ pre {
     }
     
     .nav-links {
+        flex-wrap: wrap;
         gap: 1rem;
         font-size: 0.9rem;
     }
     
-    .results-grid {
+    .results-grid,
+    .approach-grid,
+    .demo-grid,
+    .future-grid,
+    .footer-content,
+    .stats-grid {
         grid-template-columns: 1fr;
+    }
+
+    .result-card,
+    .finding > div {
+        min-width: 0;
+        overflow-wrap: anywhere;
     }
 }

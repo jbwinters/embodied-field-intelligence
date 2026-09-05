@@ -1,0 +1,52 @@
+{
+  "created_utc": "2026-09-05T00:18:52.575617+00:00",
+  "base_commit": "e01beaa5213aa86eb394e91695013b640aa395e5",
+  "branch": "feat/predictive-field-control",
+  "python": "3.14.4",
+  "dependencies": {
+    "numpy": "2.5.2",
+    "scipy": "1.18.1",
+    "matplotlib": "3.11.1",
+    "pandas": "3.0.5",
+    "seaborn": "0.13.2",
+    "Pillow": "12.3.0",
+    "pytest": "9.1.1",
+    "gymnasium": "1.3.0"
+  },
+  "original_suite": {
+    "passed": 213,
+    "expected_failures": 4
+  },
+  "final_suite": {
+    "passed": 224,
+    "expected_failures": 4
+  },
+  "regression_replay": {
+    "standard_episodes": 200,
+    "egocentric_episodes": 12,
+    "all_serialized_metrics_identical": true,
+    "before_sha256": "a1c8d80f53f0aaaaf5d8cb4175024138fc2aba32183e6a32c30bd4cb9b52d58f",
+    "after_sha256": "a1c8d80f53f0aaaaf5d8cb4175024138fc2aba32183e6a32c30bd4cb9b52d58f",
+    "standard_mean_return": -0.06800000000000146,
+    "standard_success": 0.98,
+    "standard_protocol": "run_experiment(EnvConfig(), AgentConfig(valA_init=1.0), None, Ablations(schema=0), episodes=40, seeds=5, use_controller=True)",
+    "egocentric_protocol": "Seeds 0..11, EnvConfig(H=15,W=15,max_steps=200,seed=seed); AgentConfig(valA_init=1.0), Ablations(schema=0), controller seed=seed; run_ego_episode",
+    "scope": "Original defaults/controllers in the same environment; historical archived scores differ from this fresh baseline."
+  },
+  "new_benchmark": {
+    "trials": 4800,
+    "seeds": 20,
+    "episodes_per_phase": 20,
+    "phases": 3,
+    "contenders": 4,
+    "base_seed": 1000
+  },
+  "checks": [
+    "Python 3.10 grammar parse",
+    "new code lint",
+    "CLI demo",
+    "CLI gym-register",
+    "CLI crossing",
+    "Chromium viewer playback and stepping"
+  ]
+}

@@ -2,30 +2,25 @@
 
 // Load and render charts when page loads
 document.addEventListener('DOMContentLoaded', async () => {
-    // Load analysis data - try new comprehensive results first
+    // These charts use the archived chemotaxis experiment, not pilot data.
     try {
+        if (typeof Chart === 'undefined') throw new Error('Chart library unavailable');
         const response = await fetch('assets/data/experiment_summary.json');
+        if (!response.ok) throw new Error(`Chart data unavailable (${response.status})`);
         const data = await response.json();
-        
+        document.querySelectorAll('.result-card canvas').forEach(el => { el.hidden = false; });
         renderAblationChart(data.ablation_results);
         renderScalingChart(data.scale_results);
         renderSensitivityChart(data.sensitivity_results);
+        document.querySelectorAll('[data-chart-fallback]').forEach(el => { el.hidden = true; });
     } catch (error) {
-        console.error('Error loading experiment data, trying old format:', error);
-        try {
-            const response = await fetch('assets/data/analysis_results.json');
-            const data = await response.json();
-            
-            renderAblationChart(data.ablation);
-            renderScalingChart(data.scaling);
-            renderSensitivityChart(data.sensitivity);
-        } catch (error2) {
-            console.error('Error loading analysis data:', error2);
-            // Use fallback data if file doesn't exist
-            useFallbackData();
-        }
+        // Keep the actual archived figures; never substitute invented measurements.
+        document.querySelectorAll('.result-card canvas').forEach(el => { el.hidden = true; });
+        const status = document.getElementById('chart-status');
+        status.textContent = 'Interactive charts are unavailable. Showing archived figures; measurements remain in assets/data/experiment_summary.json.';
+        status.hidden = false;
     }
-    
+
     // Smooth scrolling for navigation links
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
@@ -51,7 +46,7 @@ function renderAblationChart(data) {
             labels: data.map(d => d.condition),
             datasets: [{
                 label: 'Mean Return',
-                data: data.map(d => d.mean_return),
+                data: data.map(d => d.mean),
                 backgroundColor: [
                     'rgba(76, 175, 80, 0.7)',
                     'rgba(255, 152, 0, 0.7)',
@@ -67,7 +62,7 @@ function renderAblationChart(data) {
                     'rgb(244, 67, 54)'
                 ],
                 borderWidth: 2,
-                error: data.map(d => d.std_return)
+                error: data.map(d => d.std)
             }]
         },
         options: {
@@ -108,10 +103,10 @@ function renderScalingChart(data) {
     new Chart(ctx, {
         type: 'line',
         data: {
-            labels: data.map(d => `${d.grid_size}×${d.grid_size}`),
+            labels: data.map(d => `${d.size}×${d.size}`),
             datasets: [{
                 label: 'Mean Return',
-                data: data.map(d => d.mean_return),
+                data: data.map(d => d.mean),
                 borderColor: 'rgb(33, 150, 243)',
                 backgroundColor: 'rgba(33, 150, 243, 0.1)',
                 tension: 0.3,
@@ -151,10 +146,10 @@ function renderSensitivityChart(data) {
     new Chart(ctx, {
         type: 'line',
         data: {
-            labels: data.map(d => d.diffusion_rate.toFixed(2)),
+            labels: data.map(d => d.diff.toFixed(2)),
             datasets: [{
                 label: 'Mean Return',
-                data: data.map(d => d.mean_return),
+                data: data.map(d => d.mean),
                 borderColor: 'rgb(156, 39, 176)',
                 backgroundColor: 'rgba(156, 39, 176, 0.1)',
                 tension: 0.3,
@@ -202,38 +197,6 @@ function renderSensitivityChart(data) {
             }
         }
     });
-}
-
-function useFallbackData() {
-    // Fallback data if JSON file is not available
-    const fallbackAblation = [
-        { condition: 'Full Model', mean_return: -0.92, std_return: 0.95 },
-        { condition: 'No Trail', mean_return: -2.0, std_return: 0.0 },
-        { condition: 'No Novelty', mean_return: -0.88, std_return: 0.95 },
-        { condition: 'No Corner', mean_return: -1.12, std_return: 0.84 },
-        { condition: 'Baseline Only', mean_return: -1.8, std_return: 0.4 }
-    ];
-    
-    const fallbackScaling = [
-        { grid_size: 10, mean_return: -1.68 },
-        { grid_size: 15, mean_return: -0.87 },
-        { grid_size: 20, mean_return: -0.13 },
-        { grid_size: 25, mean_return: -0.87 },
-        { grid_size: 30, mean_return: 0.8 }
-    ];
-    
-    const fallbackSensitivity = [
-        { diffusion_rate: 0.05, mean_return: -0.87 },
-        { diffusion_rate: 0.10, mean_return: -1.13 },
-        { diffusion_rate: 0.15, mean_return: -1.2 },
-        { diffusion_rate: 0.20, mean_return: -1.13 },
-        { diffusion_rate: 0.25, mean_return: -0.87 },
-        { diffusion_rate: 0.30, mean_return: -1.13 }
-    ];
-    
-    renderAblationChart(fallbackAblation);
-    renderScalingChart(fallbackScaling);
-    renderSensitivityChart(fallbackSensitivity);
 }
 
 function observeElements() {

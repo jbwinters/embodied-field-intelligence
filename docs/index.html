@@ -25,7 +25,8 @@
     <header class="hero">
         <div class="container">
             <h1>Embodied Field Intelligence</h1>
-            <p class="subtitle">CA-Based Navigation Through Emergent Field Dynamics</p>
+            <p class="subtitle">Online Learning Through Local Field Dynamics</p>
+            <p><a href="assets/interactive/interaction_long.html">Watch 180 moves of contact learning →</a></p>
             <div class="hero-demo">
                 <img src="assets/images/efi_simple_20250817_172738.gif" alt="EFI Agent Demo" class="demo-gif">
             </div>
@@ -42,16 +43,16 @@
                         cellular automata (CA) as a computational substrate for real-time, distributed intelligence.
                     </p>
                     <p>
-                        Unlike traditional neural networks or planning algorithms, EFI agents make decisions through 
-                        the emergent dynamics of interacting fields—scent gradients, memory trails, and novelty signals—that 
-                        flow and evolve across a grid-based substrate.
+                        Local sensing seeds belief and memory fields. Bounded field updates propagate
+                        predictions and action values on a CPU. The default foraging controller uses local
+                        value relaxation; newer pilots learn moving-object dynamics and contact consequences.
                     </p>
                     
                     <h3>Key Innovations</h3>
                     <ul class="feature-list">
                         <li><strong>Field-Based Cognition:</strong> Intelligence emerges from the interaction of multiple diffusing fields rather than centralized computation</li>
                         <li><strong>Embodied Memory:</strong> The agent's path history becomes a repulsive field, naturally implementing exploration vs exploitation</li>
-                        <li><strong>Continuous Adaptation:</strong> No separate training/inference phases—the system learns and adapts continuously</li>
+                        <li><strong>Continuous Adaptation:</strong> Agents update from online experience; controlled transfer experiments also measure frozen evidence</li>
                         <li><strong>Interpretable Dynamics:</strong> Field visualizations provide direct insight into decision-making processes</li>
                     </ul>
                 </div>
@@ -60,10 +61,10 @@
                         <h4>Quick Facts</h4>
                         <ul>
                             <li>🧬 <strong>Substrate:</strong> 2D Cellular Automata</li>
-                            <li>🎯 <strong>Task:</strong> Multi-target foraging</li>
-                            <li>🔄 <strong>Updates:</strong> Fully parallel, local only</li>
+                            <li>🎯 <strong>Task:</strong> Foraging, anticipation, contact</li>
+                            <li>🔄 <strong>Updates:</strong> Bounded local field operations</li>
                             <li>👁️ <strong>Sensing:</strong> 5×5 local window</li>
-                            <li>💾 <strong>Memory:</strong> Diffusing trail fields</li>
+                            <li>💾 <strong>Memory:</strong> Beliefs, trails, learned counts</li>
                         </ul>
                     </div>
                 </div>
@@ -73,7 +74,8 @@
 
     <section id="approach" class="section alt-bg">
         <div class="container">
-            <h2>Technical Approach</h2>
+            <h2>From Chemotaxis to Learned Prediction</h2>
+            <p>The original field mechanisms below are the starting point. See the <a href="https://github.com/jbwinters/embodied-field-intelligence/blob/main/docs/ONLINE_INTELLIGENCE_DESIGN.md">architecture design</a> for the current direction and which milestones remain proposals.</p>
             
             <div class="approach-grid">
                 <div class="approach-card">
@@ -114,7 +116,7 @@
             </div>
 
             <div class="math-section">
-                <h3>Core Dynamics</h3>
+                <h3>Original Chemotaxis Dynamics</h3>
                 <div class="equation">
                     <p><strong>Diffusion Update:</strong></p>
                     <code>F(t+1) = (1-decay) × [F(t) + diff × Laplacian(F(t))]</code>
@@ -133,24 +135,30 @@
 
     <section id="results" class="section">
         <div class="container">
-            <h2>Experimental Results</h2>
+            <h2>Historical Chemotaxis Results</h2>
+            <p>These archived experiments describe the earlier scent controller. Current foraging,
+                prediction, transfer, and contact results have separate protocols in the
+                <a href="https://github.com/jbwinters/embodied-field-intelligence/blob/main/docs/README.md">research reports</a>.</p>
+            <p id="chart-status" role="status" hidden></p>
             
             <div class="results-grid">
                 <div class="result-card">
                     <h3>Ablation Study</h3>
-                    <canvas id="ablationChart"></canvas>
+                    <canvas id="ablationChart" role="img" aria-label="Archived chemotaxis ablation results" hidden></canvas>
+                    <img data-chart-fallback src="assets/images/ablation_results.png" alt="Archived chemotaxis ablation results" style="max-width:100%;height:auto">
                     <p class="chart-caption">
-                        Each component contributes to overall performance. Removing the visit trail has the 
-                        strongest negative impact, preventing exploration.
+                        Removing the visit trail produces the largest return decrease in this experiment.
+                        Removing other components does not uniformly reduce performance.
                     </p>
                 </div>
                 
                 <div class="result-card">
                     <h3>Scaling Analysis</h3>
-                    <canvas id="scalingChart"></canvas>
+                    <canvas id="scalingChart" role="img" aria-label="Archived chemotaxis scaling results" hidden></canvas>
+                    <img data-chart-fallback src="assets/images/scaling_results.png" alt="Archived chemotaxis scaling results" style="max-width:100%;height:auto">
                     <p class="chart-caption">
-                        Performance improves with environment size as larger grids provide more opportunities 
-                        for successful navigation paths.
+                        In this archived setup, mean return peaks at 15×15 and then falls.
+                        These results do not describe the current value-based controller.
                     </p>
                 </div>
             </div>
@@ -158,10 +166,11 @@
             <div class="results-grid">
                 <div class="result-card">
                     <h3>Parameter Sensitivity</h3>
-                    <canvas id="sensitivityChart"></canvas>
+                    <canvas id="sensitivityChart" role="img" aria-label="Archived scent diffusion sensitivity results" hidden></canvas>
+                    <img data-chart-fallback src="assets/images/sensitivity_results.png" alt="Archived scent diffusion sensitivity results" style="max-width:100%;height:auto">
                     <p class="chart-caption">
-                        Scent diffusion rate shows an optimal range around 0.25, balancing local precision 
-                        with long-range guidance.
+                        Among the tested rates, 0.10 has the highest mean return in this experiment.
+                        This is a parameter sweep for the earlier scent controller.
                     </p>
                 </div>
                 
@@ -172,21 +181,21 @@
                             <span class="finding-icon">📊</span>
                             <div>
                                 <strong>Trail Field Critical:</strong> Removing the visit trail causes a 1.51 point 
-                                performance drop—the largest impact of any component. Without it, agents get trapped in local loops.
+                                return decrease, the largest impact of any component in this ablation.
                             </div>
                         </div>
                         <div class="finding">
                             <span class="finding-icon">🎯</span>
                             <div>
                                 <strong>Scale Sweet Spot:</strong> 15×15 grids achieve optimal performance (+1.09 return). 
-                                Smaller grids are too constrained; larger ones dilute scent gradients.
+                                This is the best measured mean in this sweep, not a general optimal size.
                             </div>
                         </div>
                         <div class="finding">
                             <span class="finding-icon">🔄</span>
                             <div>
                                 <strong>Lower Diffusion Better:</strong> Contrary to expectations, 0.10 diffusion rate 
-                                outperforms the default 0.25, suggesting local precision beats long-range guidance.
+                                has a higher measured mean than 0.25 in this archived setup.
                             </div>
                         </div>
                     </div>
@@ -216,9 +225,18 @@
 
     <section id="demos" class="section alt-bg">
         <div class="container">
-            <h2>Interactive Demonstrations</h2>
+            <h2>Demonstrations and Figures</h2>
+            <p>Start with the continuous contact replay. The other cards preserve earlier recordings and experiment figures.</p>
             
             <div class="demo-grid">
+                <div class="demo-card">
+                    <h3>Learning Contact Consequences</h3>
+                    <a href="assets/interactive/interaction.html">
+                        <img src="assets/images/interaction_viewer.gif" alt="Learned contact fields in the original EFI episode viewer">
+                    </a>
+                    <p>Acquired experience changes an approach: 93.65% and 92.40% goal collection in two held-out contact arrangements. A bounded CPU pilot with 80 source transitions per model.</p>
+                    <p><a href="assets/interactive/interaction_long.html">Watch 180 continuous moves</a> · <a href="assets/interactive/interaction.html">Short controlled trials</a> · <a href="https://github.com/jbwinters/embodied-field-intelligence/blob/main/docs/INTERACTION_LEARNING.md">Methods, controls, and limits</a></p>
+                </div>
                 <div class="demo-card">
                     <h3>Basic Navigation</h3>
                     <img src="assets/images/efi_simple_20250817_172738.gif" alt="Basic navigation demo">
@@ -298,13 +316,13 @@ python cli.py eval --episodes 100 --seeds 5</code></pre>
                     <h4>Resources</h4>
                     <ul>
                         <li><a href="https://github.com/jbwinters/embodied-field-intelligence">GitHub Repository</a></li>
-                        <li><a href="#paper">Research Paper</a></li>
-                        <li><a href="#docs">Documentation</a></li>
+                        <li><a href="https://github.com/jbwinters/embodied-field-intelligence/blob/main/paper/efi_paper.tex">Research Paper</a></li>
+                        <li><a href="https://github.com/jbwinters/embodied-field-intelligence/blob/main/docs/README.md">Documentation</a></li>
                     </ul>
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2024 EFI Research. MIT License.</p>
+                <p>&copy; EFI Research. MIT License.</p>
             </div>
         </div>
     </footer>
