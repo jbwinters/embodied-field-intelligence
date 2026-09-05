@@ -621,6 +621,16 @@ def build_parser():
     add_common_args(ascii_parser)
     ascii_parser.add_argument("--show-every", type=int, default=10, help="Show state every N steps")
     ascii_parser.add_argument("--show-fields", action="store_true", help="Show field values")
+
+    crossing_parser = subparsers.add_parser(
+        "crossing", help="Learn, transfer, and adapt predictive hazard control")
+    crossing_parser.add_argument("--seeds", type=int, default=12)
+    crossing_parser.add_argument("--episodes", type=int, default=20,
+                                 help="Online episodes per seed per phase")
+    crossing_parser.add_argument("--seed", type=int, default=1000,
+                                 help="First independent seed")
+    crossing_parser.add_argument("--horizon", type=int, default=4)
+    crossing_parser.add_argument("--out", default="runs/crossing")
     
     return parser
 
@@ -986,6 +996,17 @@ def main():
         run_interactive(args)
     elif args.mode == "ascii":
         run_ascii(args)
+    elif args.mode == "crossing":
+        from efi.evaluation.crossing import crossing_experiment
+        result = crossing_experiment(args.seeds, args.episodes, args.seed,
+                                     args.horizon, args.out)
+        for phase, summary in result["summary"].items():
+            for mode in ("learned", "static", "unlearned", "frozen"):
+                row = summary[mode]
+                print(f"[{phase}/{mode}] success={row['success']:.1%} "
+                      f"collisions={row['collision']:.1%} return={row['return']:+.3f} "
+                      f"steps={row['steps']:.1f}")
+        print(f"Crossing results saved to {args.out}")
     else:
         raise ValueError(f"Unknown mode: {args.mode}")
 

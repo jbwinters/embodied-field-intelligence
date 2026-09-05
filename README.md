@@ -232,6 +232,23 @@ pytest tests/test_diffusion.py
 
 ## Experiments
 
+### Learned anticipation of moving hazards
+
+An opt-in egocentric controller now learns local hazard motion and uses
+four-step forecasts to choose movements or waiting. In a paired crossing
+experiment it achieves 95.25% success during acquisition, 99.25% after
+transfer to larger corridors, and 89.75% after a motion-rule reversal.
+Static and unlearned forecast controls use the same sensing and planning
+budgets. Existing foraging defaults are unchanged.
+
+```bash
+python cli.py crossing --seeds 20 --episodes 20 --seed 1000 --out runs/predictive-crossing
+```
+
+Open `runs/predictive-crossing/episode.html` to inspect the forecasts and
+the actual move/wait probabilities. See the [protocol, ablations, regression
+checks, and limitations](docs/PREDICTIVE_CONTROL.md).
+
 ### Running Custom Experiments
 
 ```python
