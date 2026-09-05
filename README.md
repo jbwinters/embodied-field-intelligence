@@ -6,6 +6,11 @@
 
 A framework for embodied artificial intelligence from local field dynamics. The original foraging controller uses a 5×5 window, internal belief fields, and a linearly-solvable-MDP value recursion with zero training episodes. Newer pilots learn motion and contact consequences from online experience.
 
+**Start here:** [Watch the demos](docs/README.md#watch-a-demo) ·
+[Run it locally](#quick-start) · [Read the evidence](docs/README.md#read-the-research).
+The recorded HTML players work offline without Python or a GPU. On GitHub,
+download the HTML file and open it in a browser; a repository link shows its source.
+
 ![A 35×35 foraging run: the agent collects every appetitive target while threading between twenty aversive ones](docs/assets/images/grid_demo.gif)
 
 *35×35, 12 appetitive targets (green), 20 aversive ones (magenta), zero training episodes. The agent maps mines from single glances and plans around them as path costs: it collects **all 12 A while touching exactly one B** — the one it needed to taste to learn the sign. Blue trace = recent path. Reproduce: `python scripts/make_grid_demo.py`.*
@@ -56,7 +61,7 @@ Earlier demonstrated capabilities remain documented in the
 [predictive control](docs/PREDICTIVE_CONTROL.md) and
 [transfer](docs/PREDICTIVE_TRANSFER.md) reports.
 
-EFI explores the use of cellular automata (CA) as a substrate for real-time, distributed intelligence in embodied agents. Behavior emerges from local field dynamics — attractor and repulsor fields updated by masked diffusion and composed into a single potential whose gradient selects actions — rather than from a centralized planner or policy network. The framework combines:
+EFI explores the use of cellular automata (CA) as a substrate for real-time, distributed intelligence in embodied agents. Local sensing seeds belief and memory fields; bounded spatial updates propagate predictions and action values. The original chemotaxis controller combines attraction and repulsion, the default foraging controller adds local value relaxation, and the newer pilots add learned motion and contact predictions. The framework combines:
 
 - **Chemotaxis Fields**: Diffusion-based scent trails for navigation
 - **Memory Systems**: Visit trails and novelty detection
@@ -78,7 +83,8 @@ EFI reaches 97% of a full-observability oracle **with zero training episodes**, 
 
 ## Installation
 
-Requires Python 3.10+.
+Requires Python 3.10+. Run these commands from the repository root, preferably
+inside a virtual environment. NumPy runs the agents on the CPU; no GPU is required.
 
 ### Basic Installation
 
@@ -106,6 +112,21 @@ pip install -e ".[viz]"
 
 ## Quick Start
 
+### Watch continuous learning
+
+After installation:
+
+```bash
+python cli.py contact-demo --seed 6 --max-steps 180 --out runs/contact-demo
+```
+
+Open `runs/contact-demo/episode.html` in a browser. One agent learns through
+180 moves with obstacles and two changes in contact response. Use the chapter
+buttons to jump to moves 60 and 120, then step through the feedback.
+This is an illustration of the two-step contact learner, not a benchmark or
+a demonstration of long-horizon reasoning. The [report](docs/INTERACTION_LEARNING.md)
+explains the experiment and its limits.
+
 ### Run a Demo
 
 ```bash
@@ -122,33 +143,28 @@ python cli.py demo --episodes 5 --save-video demo.mp4
 ### Interactive Viewer
 
 Run an episode with an interactive viewer that allows you to:
+
 - Play/pause animation
 - Step forward/backward through frames
 - Adjust playback speed
 - Scrub through frames with a slider
-- View all CA fields in real-time
+- Inspect recorded CA fields
 
 ```bash
-# Launch interactive viewer
+# Write an offline HTML recording of a foraging episode
 python cli.py interactive
 
-# Launch with auto-play
-python cli.py interactive --auto-play
+# Optional matplotlib desktop window with auto-play
+python cli.py interactive --window --auto-play
 
 # Configure environment
 python cli.py interactive --H 20 --W 20 --max-steps 150
 ```
 
-**Note**: The interactive viewer automatically detects your environment:
-- **With display**: Opens matplotlib interactive window
-- **Headless/SSH**: Generates an HTML file you can open in any browser
-
-The HTML viewer provides the same controls as the matplotlib version and works on any system. After running, it will output a path like:
-```
-HTML viewer saved to: runs/interactive_20250816-170917.html
-```
-
-Open this file in your browser to interact with the episode.
+The default always writes HTML, including on desktop and headless systems.
+Open `runs/interactive_latest.html` in your browser. `--window` explicitly
+requests the matplotlib viewer instead. HTML playback replays recorded
+observations, fields, and decisions; it does not run the agent in the browser.
 
 ### Run Evaluation
 
@@ -232,15 +248,24 @@ Test contributions of different components:
 - `--H`, `--W`: Grid dimensions (default: 17x17)
 - `--win`: Observation window size (default: 5)
 - `--p-wall`: Wall generation probability (default: 0.12)
-- `--nA`, `--nB`: Number of targets (default: 3 each)
+- `--nA`, `--nB`: Number of targets (defaults: 2 A, 4 B)
 - `--max-steps`: Episode length (default: 200)
 
-### Agent Parameters
+### Foraging Controller Parameters
 
-- `--seed-strength`: Scent injection strength (default: 0.6)
-- `--scent-diff`: Scent diffusion rate (default: 0.14)
-- `--v-decay`: Visit trail decay rate (default: 0.03)
-- `--anti-stuck-temp`: Temperature for stuck recovery (default: 0.6)
+The CLI defaults to `--controller field --control-mode lmdp`. Use
+`--controller chemotaxis` for the original scent controller. Scent parameters
+apply to that controller and the field controller's legacy scent path.
+
+- `--lam`: Value-control temperature (default: 0.02)
+- `--z-sweeps`: Value updates per tick (default: 3)
+- `--seed-strength`: Scent injection strength (default: 1.0)
+- `--scent-diff`: Scent diffusion rate (default: 0.25)
+- `--v-decay`: Trail decay rate (default: 0.02)
+- `--anti-stuck-temp`: Temperature for stuck recovery (default: 0.8)
+
+The contact and motion experiments have their own bounded configurations;
+run `python cli.py contact-demo --help` or the relevant command's `--help`.
 
 ### Schema Parameters
 
@@ -317,7 +342,7 @@ ablate = Ablations(trail=1, novelty=1, corner=1, schema=1)
 # Run experiment
 results = run_experiment(
     env_cfg, agent_cfg, schema_cfg, ablate,
-    episodes=100, seeds=10
+    episodes=100, seeds=10, use_controller=True
 )
 
 print(f"Mean return: {results.mean_return:.3f} ± {results.std_return:.3f}")
