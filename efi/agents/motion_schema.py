@@ -49,11 +49,15 @@ class MotionSchema:
 
     def kernels(self, walls):
         code = self.wall_codes(walls)
-        weights = self.counts[:, code, :] + self.prior
+        weights = self.weights(code)
         for d, (dy, dx) in enumerate(MOTIONS):
             weights[..., d] *= shift(~walls, -dy, -dx, False)[None, :, :]
         weights /= np.maximum(weights.sum(axis=-1, keepdims=True), 1e-30)
         return weights
+
+    def weights(self, codes):
+        """Unnormalized transition evidence; subclasses may pool contexts."""
+        return self.counts[:, codes, :] + self.prior
 
     @staticmethod
     def advance(mass, kernels):
@@ -92,7 +96,7 @@ class MotionSchema:
                         code = codes[y, x]
                         # Prequential score: the current transition has not
                         # yet contributed to these counts.
-                        row = self.counts[incoming, code] + self.prior
+                        row = self.weights(code)[incoming]
                         legal = np.array([not (code & (1 << j)) for j in range(4)] + [True])
                         row = row * legal
                         probability = row[d] / row.sum()

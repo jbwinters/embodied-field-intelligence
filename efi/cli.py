@@ -631,6 +631,15 @@ def build_parser():
                                  help="First independent seed")
     crossing_parser.add_argument("--horizon", type=int, default=4)
     crossing_parser.add_argument("--out", default="runs/crossing")
+
+    transfer_parser = subparsers.add_parser(
+        "transfer", help="Transfer learned hazard dynamics to moving reward interception")
+    transfer_parser.add_argument("--seeds", type=int, default=12)
+    transfer_parser.add_argument("--episodes", type=int, default=12)
+    transfer_parser.add_argument("--acquisition", type=int, default=20)
+    transfer_parser.add_argument("--seed", type=int, default=5000)
+    transfer_parser.add_argument("--horizon", type=int, default=4)
+    transfer_parser.add_argument("--out", default="runs/transfer")
     
     return parser
 
@@ -1007,6 +1016,16 @@ def main():
                       f"collisions={row['collision']:.1%} return={row['return']:+.3f} "
                       f"steps={row['steps']:.1f}")
         print(f"Crossing results saved to {args.out}")
+    elif args.mode == "transfer":
+        from efi.evaluation.transfer import transfer_experiment, MODES
+        result = transfer_experiment(args.seeds, args.episodes, args.acquisition,
+                                     args.seed, args.horizon, args.out)
+        for task, summary in result["summary"].items():
+            for mode in MODES:
+                row = summary[mode]
+                print(f"[{task}/{mode}] success={row['success']:.1%} "
+                      f"return={row['return']:+.3f} steps={row['steps']:.1f}")
+        print(f"Transfer results saved to {args.out}")
     else:
         raise ValueError(f"Unknown mode: {args.mode}")
 

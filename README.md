@@ -249,6 +249,25 @@ Open `runs/predictive-crossing/episode.html` to inspect the forecasts and
 the actual move/wait probabilities. See the [protocol, ablations, regression
 checks, and limitations](docs/PREDICTIVE_CONTROL.md).
 
+### Reusing motion across tasks
+
+An opt-in relational motion model reuses hazard-avoidance experience to
+intercept moving rewards in rooms. On the task combining obstacles and a
+moving hazard, frozen transfer achieves 81.25% success, versus 49.58% with
+an empty frozen model and 48.75% with exact-context reuse. Continued learning
+reaches 87.50%; a model learning from scratch reaches 87.08%. These are
+20-seed results, with 240 trials per task and contender.
+
+```bash
+python cli.py transfer --seeds 20 --episodes 12 --acquisition 20 --seed 5000 \
+  --out runs/predictive-transfer
+```
+
+The [report](docs/PREDICTIVE_TRANSFER.md) covers all four tasks, controls,
+uncertainty, and limits. Open `runs/predictive-transfer/episode.html` for the
+recorded target and hazard forecasts. The original 212 evaluation episodes
+and all 4,800 previous crossing trials retain identical recorded results.
+
 ### Running Custom Experiments
 
 ```python
