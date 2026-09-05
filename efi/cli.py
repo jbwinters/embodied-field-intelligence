@@ -654,6 +654,13 @@ def build_parser():
         "interaction-profile", help="Measure contact pilot CPU latency and peak allocation")
     profile_parser.add_argument("--episodes", type=int, default=400)
     profile_parser.add_argument("--out", default="runs/interaction/profile.json")
+
+    contact_demo_parser = subparsers.add_parser(
+        "contact-demo", help="Long narrated contact stream in the original episode viewer")
+    contact_demo_parser.add_argument("--seed", type=int, default=6)
+    contact_demo_parser.add_argument("--max-steps", type=int, default=180)
+    contact_demo_parser.add_argument("--arena", choices=("open", "islands", "ring"), default="islands")
+    contact_demo_parser.add_argument("--out", default="runs/contact-demo")
     
     return parser
 
@@ -1040,6 +1047,12 @@ def main():
                 print(f"[{layout}/{mode}] success={row['success']:.1%} "
                       f"return={row['return']:+.3f}")
         print(f"Interaction results and original viewer saved to {args.out}")
+    elif args.mode == "contact-demo":
+        from efi.evaluation.contact_demo import contact_demo
+        result = contact_demo(args.seed, args.max_steps, args.arena, args.out)
+        print(f"{result['steps']} continuous moves; {result['collections']} collections; "
+              f"{result['observed_transitions']} observed transitions")
+        print(f"Narrated original viewer saved to {args.out}/episode.html")
     elif args.mode == "interaction-profile":
         from efi.evaluation.interaction_profile import profile_interaction
         result = profile_interaction(args.episodes, args.out)

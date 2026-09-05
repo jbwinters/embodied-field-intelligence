@@ -22,6 +22,51 @@ below includes controls that outperform the new learner.
 
 ## Watch the original viewer
 
+**Start with the [180-move continuous example](assets/interactive/interaction_long.html)**
+to see one agent learn and act without scene resets. It includes a legend,
+agent/block labels, the 5×5 sensing window, the actual chosen move,
+step-by-step feedback, and chapter buttons. Playback is two moves per second
+(about 90 seconds total); you can pause or step through it.
+
+The longer example starts with **empty contact memory** in a 13×13 arena
+with interior obstacles. After each collection, a fresh goal appears beneath
+the same block, so the agent can keep interacting. The contact response
+changes from forward to left at move 60, then right at move 120; left/right
+are relative to the attempted move. The environment makes those changes;
+the learner receives no phase label, reset, or forced command.
+
+In the included seed-6 run, the agent collects **68 goals** (9 / 30 / 29
+across the three response phases) and learns from **119 complete transitions**.
+All 180 moves remain visible. Useful places to inspect:
+
+- **Move 4:** the first blocked contact near a wall.
+- **Moves 38–73:** the block is out of sight. The current contact controller
+  samples moves uniformly here, exposing its incomplete exploration ability.
+- **Move 80:** contact with the changed response resumes; watch prediction
+  errors and the blue forecast field.
+- **Moves 120–122:** another response change produces a surprising blocked
+  contact, followed by evidence updates.
+
+This adds duration, obstacles, repeated contact, and changing world dynamics
+to the demonstration. The agent still reasons only two moves ahead and
+does not model the future replenishment of goals. Repeated collection is not
+evidence of long-horizon planning or general recurring-context retention.
+The demo is an illustration, separate from the held-out benchmark below.
+Exploratory runs used the same seed with open, island, and ring obstacle
+layouts; the ring variant loses the block and does not recover after the
+first phase. The default island layout includes substantial stalls too.
+
+```bash
+python cli.py contact-demo --seed 6 --max-steps 180 --out runs/contact-demo
+# Optional tougher illustration; failures are retained:
+python cli.py contact-demo --seed 6 --max-steps 180 --arena ring --out runs/contact-ring
+```
+
+The command writes a complete `episode.html`, `episode.json`, and
+`results.json`. [Raw continuous trace](assets/data/contact_demo/results.json)
+and [recording](assets/data/contact_demo/episode.json) are archived, along
+with [validation of the viewer extension](assets/data/contact_demo/validation.json).
+
 [Open the interactive replay](assets/interactive/interaction.html).
 It is the existing EFI episode viewer, extended with additional field types;
 its layout, color ramps, transport controls, zoom, synchronized probe, and
@@ -29,7 +74,7 @@ telemetry strips are reused.
 
 ![Actual contact-learning recordings in the original EFI viewer](assets/images/interaction_viewer.gif)
 
-The recording includes two prospectively selected source contacts, then
+The **short benchmark recording** includes two prospectively selected source contacts, then
 the first two target trials in each contact arrangement for the acquired
 and empty controls. Source interventions between those contacts are omitted
 and explicitly labeled. Every selected target attempt is included, regardless
@@ -313,8 +358,10 @@ saturated update copies 15,376,000 payload bytes across two transport passes.
 Sparse caching is a clear future optimization, rather than a requirement
 to invent a larger model.
 
-The full suite passes **263 tests with four expected failures**, up from
-240 passing tests with the same four expected failures. Earlier deterministic
+The contact milestone passed **263 tests with four expected failures**, up from
+240 passing tests with the same four expected failures. The continuous-demo
+and viewer extension bring this to **266 passing tests**, with the same four
+expected failures. Earlier deterministic
 evaluation records reproduce **byte for byte**:
 
 | Existing path | Replayed episodes | Result |

@@ -133,6 +133,9 @@ def build_payload(episode_data: dict, final_metrics: dict = None) -> dict:
     }
     if episode_data.get("title"):
         payload["title"] = str(episode_data["title"])
+    for key in ("guide", "presentation"):
+        if key in episode_data:
+            payload[key] = episode_data[key]
     return payload
 
 
@@ -183,6 +186,22 @@ kbd { font-family: var(--mono); font-size: 10px; color: var(--ink3);
   border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; }
 .hints { font-size: 10px; color: var(--ink3); padding: 2px 0 8px;
   font-family: var(--mono); }
+.guide { margin: 14px 0; padding: 14px 16px; border: 1px solid var(--line);
+  background: var(--surface); border-radius: 6px; }
+.guide h2 { font-size: 17px; font-weight: 550; margin: 0 0 7px; }
+.guide p { margin: 6px 0; color: var(--ink2); line-height: 1.5; max-width: 100ch; }
+.guide .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 12px 0;
+  font-family: var(--mono); font-size: 11px; }
+.guide .legend span { display: inline-flex; gap: 6px; align-items: center; }
+.guide .legend i { width: 10px; height: 10px; border-radius: 2px; }
+.chapters { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.chapters button, .guide a { color: var(--accent); background: var(--surface2);
+  border: 1px solid var(--line); padding: 6px 10px; border-radius: 4px; cursor: pointer; }
+.chapters button[aria-current="true"] { border-color: var(--accent); }
+.narration { margin-top: 12px; }
+.narration p { font-size: 12px; line-height: 1.55; margin: 8px 0; color: var(--ink2); }
+.narration p:first-of-type { color: var(--accent); font-family: var(--mono); }
+.narration p:last-child { color: var(--ink3); font-size: 11px; }
 
 .main { display: grid; grid-template-columns: 380px 1fr; gap: 14px; }
 @media (max-width: 980px) { .main { grid-template-columns: 1fr; } }
@@ -282,9 +301,9 @@ for (const f of D.fields) f.ramp = makeRamp(f.hue);
 
 // ---- state ----------------------------------------------------------
 const S = {
-  t: 0, playing: false, timer: null, speed: 1, loop: true,
+  t: 0, playing: false, timer: null, speed: 1, loop: D.presentation?.loop ?? true,
   scaleMode: 'episode',            // 'episode' kills the per-frame strobing
-  showPath: true, showPolicy: D.lmdp,
+  showPath: true, showPolicy: D.presentation?.show_policy ?? D.lmdp,
   hover: null,                     // {y, x} synchronized probe cell
   pinned: null,
   modalField: null,
@@ -330,6 +349,18 @@ function drawField(p, t) {
   const ctx = p.ctx;
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(p.off, 0, 0, W * CELL, H * CELL);
+  if (D.presentation?.field_context) {
+    // Context marks are observed walls and current proprioception, not extra field values.
+    ctx.fillStyle = 'rgba(130,138,121,0.25)';
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (wallAt(t, y, x)) ctx.fillRect(x*CELL, y*CELL, CELL, CELL);
+    }
+    const pos = D.info[t].pos;
+    if (pos) {
+      ctx.strokeStyle = 'rgba(242,243,238,0.65)'; ctx.lineWidth = 1;
+      ctx.strokeRect(pos[1]*CELL+1, pos[0]*CELL+1, CELL-2, CELL-2);
+    }
+  }
   drawCrosshair(ctx);
   p.range.textContent = lo.toFixed(2) + ' → ' + hi.toFixed(2);
 }
@@ -410,6 +441,19 @@ function drawWorld(t) {
     worldCtx.strokeStyle = '#199e70'; worldCtx.lineWidth = 2;
     worldCtx.strokeRect(x * CELL + 2, y * CELL + 2, CELL - 4, CELL - 4);
   }
+  const radius = D.info[t].sensing_radius;
+  if (pos && Number.isFinite(radius)) {
+    worldCtx.save(); worldCtx.strokeStyle = 'rgba(242,243,238,0.5)';
+    worldCtx.setLineDash([3,3]); worldCtx.lineWidth = 0.8;
+    worldCtx.strokeRect((pos[1]-radius)*CELL, (pos[0]-radius)*CELL,
+                       (2*radius+1)*CELL, (2*radius+1)*CELL);
+    worldCtx.restore();
+  }
+  for (const marker of (D.info[t].markers || [])) {
+    worldCtx.font = 'bold 9px monospace'; worldCtx.textAlign = 'center';
+    worldCtx.textBaseline = 'middle'; worldCtx.fillStyle = marker.color || '#f2f3ee';
+    worldCtx.fillText(marker.text, (marker.pos[1]+0.5)*CELL, (marker.pos[0]+0.5)*CELL);
+  }
   if (S.showPolicy) {
     const pol = policyAt(t);
     if (pol) {
@@ -427,6 +471,21 @@ function drawWorld(t) {
         worldCtx.lineTo(cx + dx * len, cy + dy * len); worldCtx.stroke();
       });
     }
+  }
+  const action = D.info[t].action;
+  if (pos && Number.isInteger(action) && action >= 0 && action < 5) {
+    const [dy,dx] = [[-1,0],[1,0],[0,-1],[0,1],[0,0]][action];
+    const cx = (pos[1]+0.5)*CELL, cy = (pos[0]+0.5)*CELL;
+    worldCtx.strokeStyle = '#c98500'; worldCtx.lineWidth = 2;
+    worldCtx.beginPath();
+    if (action === 4) worldCtx.arc(cx, cy, CELL*0.37, 0, 2*Math.PI);
+    else {
+      const ex = cx+dx*CELL*0.95, ey = cy+dy*CELL*0.95;
+      worldCtx.moveTo(cx+dx*CELL*0.45, cy+dy*CELL*0.45); worldCtx.lineTo(ex,ey);
+      worldCtx.moveTo(ex-dx*4+dy*3, ey-dy*4-dx*3); worldCtx.lineTo(ex,ey);
+      worldCtx.lineTo(ex-dx*4-dy*3, ey-dy*4+dx*3);
+    }
+    worldCtx.stroke();
   }
   drawCrosshair(worldCtx);
 }
@@ -645,7 +704,7 @@ function startPlay() {
   S.timer = setInterval(() => {
     if (S.t >= N - 1) { S.loop ? setFrame(0) : stopPlay(); return; }
     setFrame(S.t + 1);
-  }, 1000 / (8 * S.speed));
+  }, 1000 / ((D.presentation?.fps || 8) * S.speed));
 }
 function stopPlay() {
   S.playing = false;
@@ -674,6 +733,8 @@ document.getElementById('path').addEventListener('click', e => {
   S.showPath = !S.showPath; e.target.setAttribute('aria-pressed', String(S.showPath)); render();
 });
 const policyBtn = document.getElementById('policy');
+policyBtn.setAttribute('aria-pressed', String(S.showPolicy));
+document.getElementById('loop').setAttribute('aria-pressed', String(S.loop));
 if (D.lmdp) {
   policyBtn.addEventListener('click', e => {
     S.showPolicy = !S.showPolicy;
@@ -701,6 +762,16 @@ function render() {
   const caption = document.getElementById('episodeCaption');
   caption.hidden = !info.caption;
   caption.textContent = info.caption || '';
+  const narration = document.getElementById('narration');
+  narration.hidden = !info.narration;
+  for (const key of ['next', 'feedback', 'learning']) {
+    document.getElementById('narration-' + key).textContent = info.narration?.[key] || '';
+  }
+  const chapters = D.guide?.chapters || [];
+  document.querySelectorAll('#chapters button').forEach((button, i) => {
+    button.setAttribute('aria-current', String(S.t >= chapters[i].frame &&
+      (i+1 === chapters.length || S.t < chapters[i+1].frame)));
+  });
   drawWorld(S.t);
   for (const p of panels) drawField(p, S.t);
   for (const st of strips) drawStrip(st);
@@ -722,6 +793,29 @@ document.getElementById('runmeta').textContent =
   (D.fields.some(f => f.key === 'ActionValue') ? 'learned interaction fields' :
     (D.lmdp ? 'value-recursion controller' : 'potential controller'));
 if (D.title) document.title = D.title;
+if (D.guide) {
+  document.getElementById('guide').hidden = false;
+  document.getElementById('guideTitle').textContent = D.guide.title || '';
+  document.getElementById('guideDescription').textContent = D.guide.description || '';
+  document.getElementById('guideNote').textContent = D.guide.note || '';
+  for (const item of (D.guide.legend || [])) {
+    const span = document.createElement('span'), chip = document.createElement('i');
+    chip.style.background = item.color;
+    span.append(chip, document.createTextNode(item.label));
+    document.getElementById('guideLegend').appendChild(span);
+  }
+  for (const item of (D.guide.chapters || [])) {
+    const button = document.createElement('button'); button.textContent = item.label;
+    button.addEventListener('click', () => { stopPlay(); setFrame(item.frame); });
+    document.getElementById('chapters').appendChild(button);
+  }
+  for (const item of (D.guide.links || [])) {
+    // Guide links are local sibling replays; reject scripts and remote targets.
+    if (!/^[a-zA-Z0-9_-]+\.html(?:#t=\d+)?$/.test(item.href)) continue;
+    const link = document.createElement('a'); link.href = item.href; link.textContent = item.label;
+    document.getElementById('chapters').appendChild(link);
+  }
+}
 const finals = document.getElementById('finals');
 const FINAL_LABELS = {coverage: 'coverage', total_return: 'return',
   targets_A: 'A', targets_B: 'B', bumps_per_100: 'bumps/100',
@@ -757,6 +851,11 @@ HTML_SHELL = """<!DOCTYPE html>
     <span class="runmeta" id="runmeta"></span>
     <span class="finals" id="finals"></span>
   </header>
+  <section class="guide" id="guide" hidden>
+    <h2 id="guideTitle"></h2><p id="guideDescription"></p>
+    <div class="legend" id="guideLegend"></div>
+    <p id="guideNote"></p><div class="chapters" id="chapters"></div>
+  </section>
   <div id="episodeCaption" hidden style="margin:10px 0;color:var(--ink2)"></div>
 
   <div class="transport" role="toolbar" aria-label="Playback">
@@ -794,6 +893,11 @@ HTML_SHELL = """<!DOCTYPE html>
       <div class="panel">
         <h3><span class="chip" style="background:#f2f3ee"></span>World</h3>
         <canvas id="world"></canvas>
+      </div>
+      <div class="panel narration" id="narration" hidden>
+        <h3>Follow this step</h3>
+        <p id="narration-next"></p><p id="narration-feedback"></p>
+        <p id="narration-learning"></p>
       </div>
       <div class="panel probe">
         <h3><span class="chip" style="background:#c98500"></span>Probe</h3>

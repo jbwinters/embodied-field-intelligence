@@ -1,0 +1,61 @@
+{
+  "created_utc": "2026-09-05T05:02:17.144061+00:00",
+  "base_commit": "a68d56e38b5b2eb376b1103dd6f1a8401b36a2c6",
+  "change": "Continuous contact illustration and optional guidance in the original viewer.",
+  "full_suite": {
+    "passed": 266,
+    "expected_failures": 4,
+    "elapsed_seconds": 132.67
+  },
+  "prior_agent_control_config_sources_unchanged": true,
+  "prior_archived_benchmark_data_unchanged": true,
+  "short_replay_original_payload_unchanged": true,
+  "short_replay_added_metadata": [
+    "guide",
+    "presentation"
+  ],
+  "historical_artifacts": "The older interaction/validation.json records the a68d56e milestone. Its renderer and short HTML hashes refer to that commit; updated viewer hashes are recorded here.",
+  "continuous_demo": {
+    "seed": 6,
+    "steps": 180,
+    "frames": 181,
+    "source_transitions": 0,
+    "collections": 68,
+    "phase_collections": [
+      9,
+      30,
+      29
+    ],
+    "observed_joint_transitions": 119,
+    "resets_during_stream": 0,
+    "forced_commands": 0,
+    "response_changes": [
+      60,
+      120
+    ],
+    "illustration_not_held_out_benchmark": true
+  },
+  "checks": [
+    "All physical transitions and chosen actions match the frame recording",
+    "Goal replenishment preserves body and block positions",
+    "Reaction changes add no phase label to observations",
+    "Unchanged behavior on regeneration after narration edits",
+    "Browser: chapters, 2 fps playback, play/pause, seek, policy toggle, zoom and terminal frame",
+    "390px viewport: document width 375px; all six fields and chapters present",
+    "Short replay links to longer example",
+    "Browser page errors: zero",
+    "Python 3.10 grammar and new-source lint",
+    "Previous core/agent/config source hashes and all archived interaction data hashes unchanged"
+  ],
+  "sha256": {
+    "efi/envs/contact_arena.py": "e7d2c1105678d41163503d211d8d541d1e090aec7227b5c9c00d1da423f83827",
+    "efi/evaluation/contact_demo.py": "a83965e34bb5eccab82b1fb50c79a39926a06b0d5fb85c7ee8b9891b7c023985",
+    "efi/visualization/html_viewer.py": "23bb889e25dd11a9be501798b3810a872c0ea396a3b93c17eff3516317f9b218",
+    "efi/cli.py": "565695ec7906dd4d9c972ba29e1829620209edfc33c424402f3cc4dc0138b5a8",
+    "tests/test_contact_demo.py": "6a22b831953c0505412ed3fc5f95b7fa1755addf1899104a678ff57d2729acde",
+    "docs/assets/data/contact_demo/results.json": "145dc7db728426bcc69b8cb44cd52015dd2abd8f9948a51bca2eda3e81682e5e",
+    "docs/assets/data/contact_demo/episode.json": "0c4b84611ba43f6c810981e47187426fa0c8214594cde072e955be41cbbfa4dd",
+    "docs/assets/interactive/interaction_long.html": "1bb073a0a3e469c1551e89894b99ade18ce85b007928b8311eed363f491010b3",
+    "docs/assets/interactive/interaction.html": "1b21a4a69527069f69dd8bc56a09db4aa0691a768c8874f39e89330265d2f1b5"
+  }
+}

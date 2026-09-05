@@ -38,6 +38,13 @@ and the supplied-versus-learned boundary.
 with `python cli.py interaction`. Two source contacts and the first selected
 target attempts are shown; omitted source interventions are labeled.*
 
+For an easier view of the learning process, open the
+[180-move continuous example](docs/assets/interactive/interaction_long.html).
+One agent starts with empty memory, encounters obstacles and two changes
+in contact response, and keeps learning without resets. The original viewer
+now includes a legend, the chosen move, sensing boundaries, feedback, and
+chapter jumps. Reproduce with `python cli.py contact-demo`.
+
 ## Overview
 
 The proposed next architecture is described in
