@@ -50,7 +50,27 @@ in contact response, and keeps learning without resets. The original viewer
 now includes a legend, the chosen move, sensing boundaries, feedback, and
 chapter jumps. Reproduce with `python cli.py contact-demo`.
 
+### Learn what a command changes
+
+**EFI-01:** two commands hold the body still but produce different object
+reactions. The existing field learner achieves **87.81%** goal collection,
+versus **17.89%** with commands pooled and **48.28%** with empty evidence,
+across 40 held-out seeds. Prediction improves even after conditioning on
+identical body feedback. This strengthens the evidence for command-specific
+learning without adding agent machinery.
+
+![Command-specific learning: all controls, prediction, and learning curves](docs/assets/images/command_contact.png)
+
+[Read the experiment and its limits](docs/COMMAND_CONSEQUENCES.md) ·
+[Open the original-viewer replay](docs/assets/interactive/command_contact.html).
+Reproduce with `python cli.py command-contact`.
+
 ## Overview
+
+The [ordered research stories](docs/RESEARCH_STORIES.md) lay out the next
+experiments: retention, useful probing, learned composition, integration,
+and eventually shared signaling and grounded language. Each story states
+what would count as a capability gain and how to preserve prior results.
 
 The proposed next architecture is described in
 [A field architecture for accumulating online intelligence](docs/ONLINE_INTELLIGENCE_DESIGN.md).

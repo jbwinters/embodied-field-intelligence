@@ -655,6 +655,19 @@ def build_parser():
     profile_parser.add_argument("--episodes", type=int, default=400)
     profile_parser.add_argument("--out", default="runs/interaction/profile.json")
 
+    command_parser = subparsers.add_parser(
+        "command-contact", help="EFI-01: learn command effects with matched body feedback")
+    command_parser.add_argument("--seeds", type=int, default=40)
+    command_parser.add_argument("--episodes", type=int, default=8)
+    command_parser.add_argument("--acquisition", type=int, default=2)
+    command_parser.add_argument("--seed", type=int, default=21000)
+    command_parser.add_argument("--out", default="runs/command-contact")
+
+    command_profile_parser = subparsers.add_parser(
+        "command-profile", help="EFI-01 CPU latency and peak memory")
+    command_profile_parser.add_argument("--episodes", type=int, default=400)
+    command_profile_parser.add_argument("--out", default="runs/command-contact/profile.json")
+
     contact_demo_parser = subparsers.add_parser(
         "contact-demo", help="Long narrated contact stream in the original episode viewer")
     contact_demo_parser.add_argument("--seed", type=int, default=6)
@@ -1047,6 +1060,20 @@ def main():
                 print(f"[{layout}/{mode}] success={row['success']:.1%} "
                       f"return={row['return']:+.3f}")
         print(f"Interaction results and original viewer saved to {args.out}")
+    elif args.mode == "command-contact":
+        from efi.evaluation.command_contact import command_experiment
+        result = command_experiment(args.seeds, args.episodes, args.acquisition,
+                                    args.seed, args.out, progress=True)
+        for mode, row in result["summary"]["overall"].items():
+            print(f"[{mode}] success={row['success']:.1%} return={row['return']:+.3f}")
+        print(f"Research gates: {result['summary']['research_gates']}")
+        print(f"EFI-01 results and original viewer saved to {args.out}")
+    elif args.mode == "command-profile":
+        from efi.evaluation.command_profile import profile_command
+        result = profile_command(args.episodes, args.out)
+        print(f"Latency (ms): {result['latency_ms_percentiles']}")
+        print(f"Resource gates: {result['resource_gates']}")
+        print(f"Profile saved to {args.out}")
     elif args.mode == "contact-demo":
         from efi.evaluation.contact_demo import contact_demo
         result = contact_demo(args.seed, args.max_steps, args.arena, args.out)

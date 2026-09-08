@@ -1,0 +1,89 @@
+{
+  "source_cost": {
+    "physical_transitions": 6400,
+    "observer_predictions": 19200,
+    "contacts": 3840,
+    "blocked_attempts": 2560,
+    "lateral_attempts": 2560,
+    "return": -63.999999999995836,
+    "complete_predictions": 19200
+  },
+  "source_prequential_joint_loss_by_repetition": {
+    "1": {
+      "conditioned": 1.467931916814593,
+      "action_blind": 1.863402799017041,
+      "empty": 1.467931916814593
+    },
+    "2": {
+      "conditioned": 0.03767866791509229,
+      "action_blind": 0.9060189990413445,
+      "empty": 1.467931916814593
+    }
+  },
+  "matched_probe_pairs": 320,
+  "all_pairs_stationary_with_distinct_object_effects": true,
+  "prediction_interventions": 640,
+  "diagnostic_predictions": 2560,
+  "target_failures_and_learning": {
+    "conditioned": {
+      "trials": 1280,
+      "failures": 156,
+      "collisions": 0,
+      "physical_steps": 2560,
+      "evidence_updates": 1280,
+      "unsuccessful_first_command": 0
+    },
+    "action_blind": {
+      "trials": 1280,
+      "failures": 1051,
+      "collisions": 0,
+      "physical_steps": 2560,
+      "evidence_updates": 2258,
+      "unsuccessful_first_command": 1018
+    },
+    "shuffled": {
+      "trials": 1280,
+      "failures": 1280,
+      "collisions": 0,
+      "physical_steps": 2560,
+      "evidence_updates": 2560,
+      "unsuccessful_first_command": 1280
+    },
+    "empty": {
+      "trials": 1280,
+      "failures": 662,
+      "collisions": 0,
+      "physical_steps": 2560,
+      "evidence_updates": 1760,
+      "unsuccessful_first_command": 582
+    },
+    "frozen": {
+      "trials": 1280,
+      "failures": 156,
+      "collisions": 0,
+      "physical_steps": 2560,
+      "evidence_updates": 0,
+      "unsuccessful_first_command": 0
+    },
+    "blind_frozen": {
+      "trials": 1280,
+      "failures": 1062,
+      "collisions": 0,
+      "physical_steps": 2560,
+      "evidence_updates": 0,
+      "unsuccessful_first_command": 1031
+    },
+    "reference": {
+      "trials": 1280,
+      "failures": 156,
+      "collisions": 0,
+      "physical_steps": 2560,
+      "evidence_updates": 1280,
+      "unsuccessful_first_command": 0
+    }
+  },
+  "scalar_reference_behavior_identical": true,
+  "scalar_reference_max_policy_difference": 4.137740114894452e-35,
+  "max_outcome_terms": 15750,
+  "note": "Source failures are failed commanded effects, not failed reward tasks: source has no goals. Probe observations are isolated evaluation interventions, not target training. Complete target feedback is charged once per actual transition; frozen diagnostics score but do not learn."
+}
