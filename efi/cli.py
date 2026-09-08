@@ -668,6 +668,27 @@ def build_parser():
     command_profile_parser.add_argument("--episodes", type=int, default=400)
     command_profile_parser.add_argument("--out", default="runs/command-contact/profile.json")
 
+    context_parser = subparsers.add_parser(
+        "context-memory", help="EFI-02: recognize and reuse returning response conditions")
+    context_parser.add_argument("--seeds", type=int, default=40)
+    context_parser.add_argument("--seed", type=int, default=61000)
+    context_parser.add_argument(
+        "--workers", type=int, default=1,
+        help="Independent evaluation processes; profile separately")
+    context_parser.add_argument("--out", default="runs/context-memory")
+    context_parser.add_argument("--common-only", action="store_true")
+    context_parser.add_argument("--immediate-only", action="store_true")
+
+    capacity_parser = subparsers.add_parser(
+        "context-capacity", help="EFI-02 bounded retention under increasing response load")
+    capacity_parser.add_argument("--seeds", type=int, default=10)
+    capacity_parser.add_argument("--seed", type=int, default=62000)
+    capacity_parser.add_argument("--out", default="runs/context-memory")
+    context_profile_parser = subparsers.add_parser(
+        "context-profile", help="EFI-02 CPU latency and saturated-cache memory")
+    context_profile_parser.add_argument("--lifetimes", type=int, default=3)
+    context_profile_parser.add_argument("--out", default="runs/context-memory/profile.json")
+
     contact_demo_parser = subparsers.add_parser(
         "contact-demo", help="Long narrated contact stream in the original episode viewer")
     contact_demo_parser.add_argument("--seed", type=int, default=6)
@@ -1071,6 +1092,23 @@ def main():
     elif args.mode == "command-profile":
         from efi.evaluation.command_profile import profile_command
         result = profile_command(args.episodes, args.out)
+        print(f"Latency (ms): {result['latency_ms_percentiles']}")
+        print(f"Resource gates: {result['resource_gates']}")
+        print(f"Profile saved to {args.out}")
+    elif args.mode == "context-memory":
+        from efi.evaluation.context_memory import context_experiment
+        result = context_experiment(args.seeds, args.seed, args.out,
+                                    delays=(0,) if args.immediate_only else (0, 3),
+                                    behavior=not args.common_only, progress=True, workers=args.workers)
+        print(f"Research gates: {result['summary']['research_gates']}")
+        print(f"EFI-02 results saved to {args.out}")
+    elif args.mode == "context-capacity":
+        from efi.evaluation.context_capacity import capacity_experiment
+        capacity_experiment(args.seeds, args.seed, args.out, progress=True)
+        print(f"EFI-02 capacity results saved to {args.out}")
+    elif args.mode == "context-profile":
+        from efi.evaluation.context_profile import profile_context
+        result = profile_context(args.lifetimes, args.out)
         print(f"Latency (ms): {result['latency_ms_percentiles']}")
         print(f"Resource gates: {result['resource_gates']}")
         print(f"Profile saved to {args.out}")
