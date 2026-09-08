@@ -1,0 +1,515 @@
+"""EFI-01: common-stream command learning with matched body feedback.
+
+World labels belong to this evaluator. Controllers receive only observation
+windows, forced experimental command indices, and body displacement.
+"""
+
+from dataclasses import asdict
+import hashlib
+import json
+from pathlib import Path
+import subprocess
+from time import perf_counter
+
+import numpy as np
+
+from ..agents.interaction_controller import InteractionFieldController
+from ..agents.interaction_schema import ROTATE
+from ..configs.interaction_config import InteractionConfig
+from ..core.anticipation import MOTIONS
+from ..envs.command_contact import CommandContactConfig, CommandContactWorld
+from .contact_demo import movement, NAMES
+from .interaction import CONTEXTS, paired, snapshot
+
+MODES = ("conditioned", "action_blind", "shuffled", "empty", "frozen", "blind_frozen", "reference")
+PROBE_MODES = MODES[:4]
+LAWS = ("aligned", "reversed")
+LAYOUTS = ("left_blocked", "right_blocked")
+
+
+def make_agent(seed=0, mode="conditioned", counts=None, frozen=False):
+    if mode not in MODES:
+        raise ValueError("unknown command-contact control")
+    cfg = InteractionConfig(
+        learn=not frozen and mode not in ("frozen", "blind_frozen"),
+        action_conditioned=mode not in ("action_blind", "blind_frozen"),
+    )
+    agent = InteractionFieldController(cfg, seed, reference=mode == "reference")
+    if counts is not None and mode != "empty":
+        agent.schema.counts[:] = counts
+        if mode == "shuffled":
+            agent.schema.counts[:, [2, 3]] = counts[:, [3, 2]]
+    return agent
+
+
+def rotated_command(command, rotation):
+    dy, dx = MOTIONS[command]
+    for _ in range(rotation % 4):
+        dy, dx = -dx, dy
+    return MOTIONS.index((dy, dx))
+
+
+def score(experience, info):
+    """Score the immutable pre-action prediction, including stationary body."""
+    if experience is None:
+        return None
+    p = np.asarray(experience.probabilities).reshape(5, 5)
+    b = int(ROTATE[experience.heading, MOTIONS.index(tuple(info["displacement"]))])
+    o = int(ROTATE[experience.heading, MOTIONS.index(tuple(info["object_displacement"]))])
+    joint = float(p[b, o])
+    return {
+        "joint_loss": -float(np.log(max(joint, 1e-12))),
+        "object_loss": -float(np.log(max(joint / max(float(p[b].sum()), 1e-12), 1e-12))),
+        "body_probability": float(p[b].sum()),
+        "model_version": experience.model_version,
+        "context": experience.context,
+        "canonical_command": experience.action,
+    }
+
+
+def recording():
+    return {
+        "title": "EFI-01 · same body movement, different consequences",
+        "presentation": {"fps": 1, "loop": False, "show_policy": False, "field_context": True},
+        "guide": {
+            "title": "Watch the command, then the block",
+            "description": "Lateral commands hold the white agent still and move the blue block. "
+            "Hidden actuator wiring either follows or reverses the command. Clear the block, "
+            "then enter the green goal beneath it. Each scene is a separate short trial.",
+            "legend": [
+                {"label": "A · agent", "color": "#f2f3ee"},
+                {"label": "B · block", "color": "#3987e5"},
+                {"label": "Goal beneath block", "color": "#199e70"},
+                {"label": "Arrow · command, not body motion", "color": "#c98500"},
+            ],
+            "chapters": [],
+            "note": "Prospectively selected: open-context lateral commands "
+            "from source repetition 1; "
+            "first two trials of each layout for both conditioned and command-blind learners, "
+            "both laws, seed 21000 (or the requested first seed). Other source interventions "
+            "are omitted. Captions reveal evaluator truth; the agent never receives them.",
+        },
+        "frames": [],
+        "world_frames": [],
+    }
+
+
+def append_frame(
+    record,
+    env,
+    agent,
+    scene,
+    caption,
+    action=None,
+    info=None,
+    reward=0.0,
+    total=0.0,
+    terminal=False,
+    forced=False,
+):
+    if record is None:
+        return
+    fields, world = snapshot(env, agent, scene, caption, reward, terminal, total)
+    if env.t == 0:
+        # Six group-level chapter buttons keep the actual fields visible.
+        label = " · ".join(caption.split(" · ")[:2])
+        chapters = record["guide"]["chapters"]
+        if not chapters or chapters[-1]["label"] != label:
+            chapters.append({"frame": len(record["frames"]), "label": label})
+    feedback = "Scene reset. Existing empirical evidence is retained unless the caption says empty."
+    if info is not None:
+        feedback = (
+            f"Agent {movement(info['displacement'])}; "
+            f"block {movement(info['object_displacement'])}. "
+        )
+        feedback += "Goal collected." if info["success"] else "Goal not collected."
+    learning = "No previous transition in this scene."
+    if agent.last_loss is not None:
+        learning = (
+            f"Before updating: {np.exp(-agent.last_loss):.1%} "
+            "probability for the actual joint effect. "
+        )
+        learning += f"Evidence updates in this learner: {agent.schema.observed}."
+    pad = (13 - env.H) // 2
+    fields["info"].update(
+        {
+            "action": action,
+            "sensing_radius": 2,
+            "model_version": agent.schema.version,
+            "displacement": None if info is None else info["displacement"],
+            "object_displacement": None if info is None else info["object_displacement"],
+            "narration": {
+                "next": (
+                    "Trial complete."
+                    if terminal
+                    else f"{'Forced source' if forced else 'Selected'} command: "
+                    f"{NAMES[action].upper()}. "
+                    "A lateral command can move the block while the agent stays still."
+                ),
+                "feedback": feedback,
+                "learning": learning,
+            },
+            "markers": [
+                {"pos": (np.asarray(env.body) + pad).tolist(), "text": "A", "color": "#111310"},
+                {"pos": (np.asarray(env.occupant) + pad).tolist(), "text": "B", "color": "#f2f3ee"},
+            ],
+        }
+    )
+    record["frames"].append(fields)
+    record["world_frames"].append(world)
+
+
+def common_transition(env, agents, action, record=None, scene=0, caption=""):
+    """One physical intervention, identical observation/action stream for all."""
+    obs = env.reset()
+    pending, latency = {}, {}
+    for mode, agent in agents.items():
+        started = perf_counter()
+        agent.reset()
+        agent.observe(obs)
+        agent.think()
+        agent.select_action(action)
+        pending[mode] = agent.pending
+        latency[mode] = 1000 * (perf_counter() - started)
+    first = next(iter(agents.values()))
+    append_frame(record, env, first, scene, caption, action, forced=True)
+    obs, reward, _, info = env.step(action)
+    scores = {}
+    for mode, agent in agents.items():
+        scores[mode] = score(pending[mode], info)
+        started = perf_counter()
+        agent.after_env_step(info["displacement"])
+        agent.observe(obs)
+        latency[mode] += 1000 * (perf_counter() - started)
+        if scores[mode] is None or not agent.last_complete:
+            raise AssertionError("complete local feedback required by this experiment")
+        if not np.isclose(scores[mode]["joint_loss"], agent.last_loss):
+            raise AssertionError("score must match the saved pre-update prediction")
+    append_frame(
+        record,
+        env,
+        first,
+        scene,
+        caption,
+        info=info,
+        reward=reward,
+        total=reward,
+        terminal=True,
+        forced=True,
+    )
+    return {
+        "scores": scores,
+        "latency_ms": latency,
+        "action": action,
+        "return": reward,
+        "steps": 1,
+        **info,
+    }
+
+
+def acquire(seed, law, repetitions=2, record=None):
+    agents = {
+        m: make_agent(seed, m, frozen=m == "empty")
+        for m in ("conditioned", "action_blind", "empty")
+    }
+    rows = []
+    rng = np.random.RandomState(seed)
+    tasks = [(c, a) for c in CONTEXTS for a in range(5)]
+    for rep in range(repetitions):
+        for index in rng.permutation(len(tasks)):
+            context, command = tasks[index]
+            rotation = int(rng.randint(4))
+            env = CommandContactWorld(
+                CommandContactConfig(
+                    seed=seed * 1000 + rep * 40 + int(index),
+                    rule=law,
+                    source=True,
+                    context=context,
+                    rotate=rotation,
+                    max_steps=1,
+                )
+            )
+            capture = record if rep == 0 and context == 0 and command in (2, 3) else None
+            row = common_transition(
+                env,
+                agents,
+                rotated_command(command, rotation),
+                capture,
+                len(record["frames"]) if capture else 0,
+                f"Source · {law} · forced lateral command · other exposures omitted",
+            )
+            rows.append(
+                dict(
+                    row,
+                    seed=seed,
+                    law=law,
+                    exposure=len(rows),
+                    repetition=rep,
+                    source_context=context,
+                    command=command,
+                    rotation=rotation,
+                )
+            )
+    if not np.array_equal(
+        agents["conditioned"].schema.counts, agents["action_blind"].schema.counts
+    ):
+        raise AssertionError("common source observers must acquire identical empirical counts")
+    if agents["empty"].schema.counts.any():
+        raise AssertionError("source empty diagnostic learned")
+    return agents["conditioned"].schema.counts.copy(), rows
+
+
+def probe(seed, law, counts):
+    agents = {m: make_agent(seed, m, counts, frozen=True) for m in PROBE_MODES}
+    initial = {m: a.schema.counts.copy() for m, a in agents.items()}
+    rows = []
+    for layout in LAYOUTS:
+        for front in (False, True):
+            cfg = CommandContactConfig(
+                seed=seed, rule=law, layout=layout, front_wall=front, rotate=seed % 4, max_steps=1
+            )
+            observations = []
+            for command in (2, 3):
+                env = CommandContactWorld(cfg)
+                observations.append(env.reset())
+                row = common_transition(env, agents, rotated_command(command, cfg.rotate))
+                if row["displacement"] != (0, 0):
+                    raise AssertionError(
+                        "causal diagnostic requires identical stationary body feedback"
+                    )
+                rows.append(
+                    dict(row, seed=seed, law=law, layout=layout, front_wall=front, command=command)
+                )
+            if not np.array_equal(*observations):
+                raise AssertionError("matched interventions must start with identical sensations")
+    if any(not np.array_equal(initial[m], a.schema.counts) for m, a in agents.items()):
+        raise AssertionError("diagnostic probes may not train target models")
+    return rows
+
+
+def run_target(env, agent, record=None, scene=0, caption=""):
+    started = perf_counter()
+    agent.reset()
+    agent.observe(env.reset())
+    startup_ms = 1000 * (perf_counter() - started)
+    total, transitions = 0.0, []
+    previous, reward = None, 0.0
+    for _ in range(env.cfg.max_steps):
+        started = perf_counter()
+        agent.think()
+        action = agent.select_action()
+        elapsed = perf_counter() - started
+        exp = agent.pending
+        policy = agent.policy.tolist()
+        bounds = agent.field.value_bounds.tolist()
+        terms = agent.field.outcome_terms
+        append_frame(record, env, agent, scene, caption, action, previous, reward, total)
+        obs, reward, done, info = env.step(action)
+        prediction = score(exp, info)
+        started = perf_counter()
+        agent.after_env_step(info["displacement"])
+        agent.observe(obs)
+        latency = 1000 * (elapsed + perf_counter() - started)
+        total += reward
+        transitions.append(
+            {
+                "action": action,
+                "policy": policy,
+                "value_bounds": bounds,
+                "prediction": prediction,
+                "latency_ms": latency,
+                "outcome_terms": terms,
+                "rule_bytes_copied": agent.work["rule_bytes_copied"],
+                "complete": agent.last_complete,
+                "reward": reward,
+                **info,
+            }
+        )
+        previous = info
+        if done:
+            break
+    append_frame(
+        record, env, agent, scene, caption, info=info, reward=reward, total=total, terminal=True
+    )
+    return {
+        "success": info["success"],
+        "return": total,
+        "steps": len(transitions),
+        "contacts": sum(t["contact"] for t in transitions),
+        "bumps": sum(t["bump"] for t in transitions),
+        "collision": info["collision"],
+        "learned_transitions": agent.schema.observed,
+        "startup_ms": startup_ms,
+        "transitions": transitions,
+    }
+
+
+def summarize(rows, diagnostics, seed_ids):
+    metrics = ("success", "return", "steps", "contacts", "bumps", "collision")
+
+    def means(group):
+        return {
+            m: {
+                "n": sum(r["mode"] == m for r in group),
+                **{
+                    key: float(np.mean([r[key] for r in group if r["mode"] == m]))
+                    for key in metrics
+                },
+            }
+            for m in MODES
+        }
+
+    prediction = [
+        dict(seed=r["seed"], mode=m, **r["scores"][m]) for r in diagnostics for m in PROBE_MODES
+    ]
+    comparisons = {}
+    for baseline in ("action_blind", "shuffled", "empty"):
+        behavior = paired(rows, "conditioned", baseline, "success", seed_ids)
+        losses = {
+            k: paired(prediction, baseline, "conditioned", k, seed_ids)
+            for k in ("joint_loss", "object_loss")
+        }
+        comparisons[baseline] = {"success_gain": behavior, "loss_reduction": losses}
+    gates = {
+        m: c["success_gain"]["mean"] >= 0.1
+        and c["success_gain"]["bootstrap_95"][0] > 0
+        and all(v["bootstrap_95"][0] > 0 for v in c["loss_reduction"].values())
+        for m, c in comparisons.items()
+        if m != "empty"
+    }
+    return {
+        "overall": means(rows),
+        "by_law_layout": {
+            f"{law}/{layout}": means([r for r in rows if r["law"] == law and r["layout"] == layout])
+            for law in LAWS
+            for layout in LAYOUTS
+        },
+        "first_trial": means([r for r in rows if r["episode"] == 0 and r["layout"] == LAYOUTS[0]]),
+        "learning_curves": {
+            layout: [
+                means([r for r in rows if r["layout"] == layout and r["episode"] == e])
+                for e in sorted({r["episode"] for r in rows})
+            ]
+            for layout in LAYOUTS
+        },
+        "prediction": {
+            m: {
+                k: float(np.mean([r[k] for r in prediction if r["mode"] == m]))
+                for k in ("joint_loss", "object_loss")
+            }
+            for m in PROBE_MODES
+        },
+        "paired": comparisons,
+        "research_gates": gates,
+    }
+
+
+def command_experiment(
+    seeds=40, episodes=8, acquisition=2, base_seed=21000, output=None, progress=False
+):
+    if min(seeds, episodes, acquisition) < 1:
+        raise ValueError("positive seed, trial and acquisition counts required")
+    rows, training, diagnostics, models = [], [], [], []
+    demo = recording()
+    for seed in range(base_seed, base_seed + seeds):
+        for law in LAWS:
+            counts, source = acquire(seed, law, acquisition, demo if seed == base_seed else None)
+            training.extend(source)
+            models.append({"seed": seed, "law": law, "counts": counts.tolist()})
+            diagnostics.extend(probe(seed, law, counts))
+            for mode in MODES:
+                agent = make_agent(seed, mode, counts)
+                initial = agent.schema.counts.copy()
+                for layout in LAYOUTS:
+                    for episode in range(episodes):
+                        env = CommandContactWorld(
+                            CommandContactConfig(
+                                seed=seed * 1000 + episode,
+                                rule=law,
+                                layout=layout,
+                                front_wall=bool(episode % 2),
+                                rotate=(seed + episode) % 4,
+                                size=(9, 11, 13)[episode % 3],
+                            )
+                        )
+                        capture = (
+                            demo
+                            if seed == base_seed and mode in MODES[:2] and episode < 2
+                            else None
+                        )
+                        caption = (
+                            f"{law} · {mode.replace('_', ' ')} · "
+                            f"{layout.replace('_', ' ')} · trial {episode + 1}"
+                        )
+                        row = run_target(env, agent, capture, len(demo["frames"]), caption)
+                        rows.append(
+                            dict(row, seed=seed, law=law, mode=mode, layout=layout, episode=episode)
+                        )
+                if not agent.cfg.learn and not np.array_equal(initial, agent.schema.counts):
+                    raise AssertionError("frozen target diagnostic learned")
+        if progress:
+            print(f"[EFI-01] seed {seed}: {len(rows)} target trials", flush=True)
+    root = Path(__file__).resolve().parents[2]
+    protocol_file = root / "docs/EFI01_PROTOCOL.md"
+    source_paths = [
+        "efi/agents/interaction_controller.py",
+        "efi/agents/interaction_schema.py",
+        "efi/configs/interaction_config.py",
+        "efi/core/interaction.py",
+        "efi/core/experience.py",
+        "efi/envs/command_contact.py",
+        "efi/envs/interaction_world.py",
+        "efi/evaluation/command_contact.py",
+        "efi/evaluation/interaction_reference.py",
+    ]
+    revision = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True
+    )
+    result = {
+        "protocol": {
+            "base_revision": revision.stdout.strip() if revision.returncode == 0 else "unavailable",
+            "source_sha256": {
+                p: hashlib.sha256((root / p).read_bytes()).hexdigest() for p in source_paths
+            },
+            "version": 1,
+            "sha256": hashlib.sha256(protocol_file.read_bytes()).hexdigest(),
+            "base_seed": base_seed,
+            "seeds": seeds,
+            "episodes": episodes,
+            "acquisition_repetitions": acquisition,
+            "config": asdict(InteractionConfig()),
+            "source_transitions": len(training),
+            "diagnostic_interventions": len(diagnostics),
+            "target_trials": len(rows),
+            "target_steps": sum(r["steps"] for r in rows),
+            "modes": MODES,
+            "laws": LAWS,
+            "layouts": LAYOUTS,
+            "bootstrap": "10000 paired seed resamples, RNG 29, percentile 95%",
+            "target_order": "Carry evidence through left_blocked then right_blocked trials; "
+            "reset spatial memory each trial.",
+            "source_accounting": "One physical stream per law/seed; three observers. "
+            "All targets charged the same source exposure, including empty.",
+        },
+        "summary": summarize(rows, diagnostics, list(range(base_seed, base_seed + seeds))),
+        "rows": rows,
+        "training": training,
+        "diagnostics": diagnostics,
+        "models": models,
+    }
+    if output:
+        directory = Path(output)
+        directory.mkdir(parents=True, exist_ok=True)
+
+        def dump(value):
+            return json.dumps(value, default=lambda x: x.tolist(), separators=(",", ":"))
+
+        (directory / "results.json").write_text(dump(result))
+        (directory / "summary.json").write_text(
+            json.dumps({k: result[k] for k in ("protocol", "summary")}, indent=2)
+        )
+        (directory / "episode.json").write_text(dump(demo))
+        from ..visualization.html_viewer import create_html_viewer
+
+        create_html_viewer(demo, directory / "episode.html")
+    return result

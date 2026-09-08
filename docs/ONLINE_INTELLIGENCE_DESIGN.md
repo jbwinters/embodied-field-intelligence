@@ -9,6 +9,10 @@ proposals. See the
 The implementation baseline is commit `bbb63de` on
 `feat/predictive-field-control`.
 
+For the active implementation order, including the later social and language
+experiments, see the [ordered research stories](RESEARCH_STORIES.md). The
+contracts and gates below remain the reference for the bounded architecture.
+
 ## 1. Direction and design plan
 
 Build an embodied agent whose experience changes what it can predict and

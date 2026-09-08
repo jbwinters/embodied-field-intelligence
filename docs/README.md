@@ -8,19 +8,20 @@ next architectural proposals.
 
 | Recording | What to look for | Open the file |
 |---|---|---|
+| EFI-01 command consequences · 56 frames | Two commands hold the body still but move the block differently. Six chapter groups compare acquired and command-blind evidence. | [Command replay](assets/interactive/command_contact.html) |
 | Continuous contact learning · 180 moves, about 90 seconds | One agent starts with empty evidence, encounters obstacles, and learns through two changes in object response. Jump to move 120 and step forward. | [Long replay](assets/interactive/interaction_long.html) |
 | Controlled contact trials · 28 frames | Selected source contacts, then acquired-versus-empty target attempts. These are separate scenes, with omitted source interventions labeled. | [Short replay](assets/interactive/interaction.html) |
 
 These are the original EFI HTML viewer, with recorded fields, action
-probabilities, a synchronized probe, and playback controls. The longer
-recording adds a legend, sensing boundaries, chapter buttons, and action
-feedback. Neither replay needs Python, a GPU, a server, or an internet
+probabilities, a synchronized probe, and playback controls. Narrated
+recordings include a legend, sensing boundaries, chapter buttons, and action
+feedback. None of the replays needs Python, a GPU, a server, or an internet
 connection. Learning happened during recording; playback does not run it again.
 
-**From a checkout:** open either HTML file in a browser. **On GitHub:** open
+**From a checkout:** open any HTML file in a browser. **On GitHub:** open
 the file link, use **Download raw file**, then open the downloaded `.html`.
-GitHub displays HTML source rather than running the player. Download both
-files into the same folder if you want their links to each other to work.
+GitHub displays HTML source rather than running the player. Download linked
+players into the same folder if you want their links to each other to work.
 
 To browse the entire research site locally, run this from the repository root:
 
@@ -42,6 +43,9 @@ After [installation](../README.md#installation), run commands from the repositor
 # Longer continuous contact example; open runs/contact-demo/episode.html
 python cli.py contact-demo --seed 6 --max-steps 180 --out runs/contact-demo
 
+# Quick EFI-01 run; open runs/command-smoke/episode.html
+python cli.py command-contact --seeds 1 --episodes 2 --seed 31010 --out runs/command-smoke
+
 # Original foraging controller; open runs/interactive_latest.html
 python cli.py interactive
 
@@ -60,6 +64,8 @@ opt-in; they have not been unified into one agent with all earlier capabilities.
 
 | Start with | Covers |
 |---|---|
+| [Ordered research stories](RESEARCH_STORIES.md) | Active sequence from action consequences and retention through composition, social learning, shared signaling, and grounded language; experiments and acceptance criteria for each |
+| [EFI-01: command consequences](COMMAND_CONSEQUENCES.md) | Matched-body-feedback evidence for command-specific learning, all seven controls, source costs, preserved evaluations, and original-viewer replay |
 | [Contact learning](INTERACTION_LEARNING.md) | Current implementation, a viewer walkthrough, held-out controls, CPU/memory costs, and limitations |
 | [Predictive crossing](PREDICTIVE_CONTROL.md) | Learning to anticipate moving hazards and adapt after their motion changes |
 | [Motion transfer](PREDICTIVE_TRANSFER.md) | Reusing acquired motion across object roles and room geometry |

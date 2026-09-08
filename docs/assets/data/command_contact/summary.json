@@ -1,0 +1,1976 @@
+{
+  "protocol": {
+    "base_revision": "104c2ebc89f71603a97cb4eb65a6be7fb48788f1",
+    "source_sha256": {
+      "efi/agents/interaction_controller.py": "e9f7775b24b101aebea056aba1daf41f58e1a94f2256cd11982ec43227f308b7",
+      "efi/agents/interaction_schema.py": "aea7f159cf40c44ba1af5cce02799b03f6afe3ef106d26e7b72a5fbfca43fe5f",
+      "efi/configs/interaction_config.py": "7e4eacaafd8fd6b178d1b38114d44723db8368811015fefc1c09b53b94a4a1b3",
+      "efi/core/interaction.py": "eca8509690a8ae9c88f3d942497868d254e880106a30aa607bb02e928ec1a167",
+      "efi/core/experience.py": "57ab43dd18c058f9857f02d36d14d624463fee1a6840163778bf5815bc861488",
+      "efi/envs/command_contact.py": "1a4e422c871e4e5b411f460023ac12619a9c5a6c88f1ef6189502d87ba150167",
+      "efi/envs/interaction_world.py": "79dc6a61f5ce589d2dce67760f60289d293872a2306f4c3dd8c853477fb5d3b0",
+      "efi/evaluation/command_contact.py": "fd0b79c78d95d4d6bdaa9040b27d626985bb564b96f40f9ef7072e4993b91e72",
+      "efi/evaluation/interaction_reference.py": "b598a248411bd9bdbf201fc194a85b4ad217203104032bfb33003bcc87c58354"
+    },
+    "version": 1,
+    "sha256": "6cb9e3a872427817ffe4e11a74caf98de72b3132be9cc766d01e6fdf2527036a",
+    "base_seed": 21000,
+    "seeds": 40,
+    "episodes": 8,
+    "acquisition_repetitions": 2,
+    "config": {
+      "map_size": 31,
+      "horizon": 2,
+      "temperature": 0.02,
+      "prior": 0.01,
+      "retention": 0.95,
+      "step_cost": -0.01,
+      "collision_cost": -2.0,
+      "goal_reward_bound": 1.0,
+      "learn": true,
+      "action_conditioned": true,
+      "rule_passes": 2
+    },
+    "source_transitions": 6400,
+    "diagnostic_interventions": 640,
+    "target_trials": 8960,
+    "target_steps": 17920,
+    "modes": [
+      "conditioned",
+      "action_blind",
+      "shuffled",
+      "empty",
+      "frozen",
+      "blind_frozen",
+      "reference"
+    ],
+    "laws": [
+      "aligned",
+      "reversed"
+    ],
+    "layouts": [
+      "left_blocked",
+      "right_blocked"
+    ],
+    "bootstrap": "10000 paired seed resamples, RNG 29, percentile 95%",
+    "target_order": "Carry evidence through left_blocked then right_blocked trials; reset spatial memory each trial.",
+    "source_accounting": "One physical stream per law/seed; three observers. All targets charged the same source exposure, including empty."
+  },
+  "summary": {
+    "overall": {
+      "conditioned": {
+        "n": 1280,
+        "success": 0.878125,
+        "return": 0.858125,
+        "steps": 2.0,
+        "contacts": 1.0,
+        "bumps": 0.0,
+        "collision": 0.0
+      },
+      "action_blind": {
+        "n": 1280,
+        "success": 0.17890625,
+        "return": 0.15890624999999997,
+        "steps": 2.0,
+        "contacts": 1.315625,
+        "bumps": 0.93515625,
+        "collision": 0.0
+      },
+      "shuffled": {
+        "n": 1280,
+        "success": 0.0,
+        "return": -0.019999999999999997,
+        "steps": 2.0,
+        "contacts": 2.0,
+        "bumps": 2.0,
+        "collision": 0.0
+      },
+      "empty": {
+        "n": 1280,
+        "success": 0.4828125,
+        "return": 0.46281250000000007,
+        "steps": 2.0,
+        "contacts": 1.0015625,
+        "bumps": 0.375,
+        "collision": 0.0
+      },
+      "frozen": {
+        "n": 1280,
+        "success": 0.878125,
+        "return": 0.858125,
+        "steps": 2.0,
+        "contacts": 1.0,
+        "bumps": 0.0,
+        "collision": 0.0
+      },
+      "blind_frozen": {
+        "n": 1280,
+        "success": 0.1703125,
+        "return": 0.1503125,
+        "steps": 2.0,
+        "contacts": 1.36953125,
+        "bumps": 1.0046875,
+        "collision": 0.0
+      },
+      "reference": {
+        "n": 1280,
+        "success": 0.878125,
+        "return": 0.858125,
+        "steps": 2.0,
+        "contacts": 1.0,
+        "bumps": 0.0,
+        "collision": 0.0
+      }
+    },
+    "by_law_layout": {
+      "aligned/left_blocked": {
+        "conditioned": {
+          "n": 320,
+          "success": 0.903125,
+          "return": 0.883125,
+          "steps": 2.0,
+          "contacts": 1.0,
+          "bumps": 0.0,
+          "collision": 0.0
+        },
+        "action_blind": {
+          "n": 320,
+          "success": 0.19375,
+          "return": 0.17375,
+          "steps": 2.0,
+          "contacts": 1.35625,
+          "bumps": 0.909375,
+          "collision": 0.0
+        },
+        "shuffled": {
+          "n": 320,
+          "success": 0.0,
+          "return": -0.019999999999999997,
+          "steps": 2.0,
+          "contacts": 2.0,
+          "bumps": 2.0,
+          "collision": 0.0
+        },
+        "empty": {
+          "n": 320,
+          "success": 0.484375,
+          "return": 0.4643750000000001,
+          "steps": 2.0,
+          "contacts": 1.0,
+          "bumps": 0.375,
+          "collision": 0.0
+        },
+        "frozen": {
+          "n": 320,
+          "success": 0.903125,
+          "return": 0.883125,
+          "steps": 2.0,
+          "contacts": 1.0,
+          "bumps": 0.0,
+          "collision": 0.0
+        },
+        "blind_frozen": {
+          "n": 320,
+          "success": 0.184375,
+          "return": 0.164375,
+          "steps": 2.0,
+          "contacts": 1.39375,
+          "bumps": 0.98125,
+          "collision": 0.0
+        },
+        "reference": {
+          "n": 320,
+          "success": 0.903125,
+          "return": 0.883125,
+          "steps": 2.0,
+          "contacts": 1.0,
+          "bumps": 0.0,
+          "collision": 0.0
+        }
+      },
+      "aligned/right_blocked": {
+        "conditioned": {
+          "n": 320,
+          "success": 0.853125,
+          "return": 0.8331250000000001,
+          "steps": 2.0,
+          "contacts": 1.0,
+          "bumps": 0.0,
+          "collision": 0.0
+        },
+        "action_blind": {
+          "n": 320,
+          "success": 0.175,
+          "return": 0.15499999999999997,
+          "steps": 2.0,
+          "contacts": 1.259375,
+          "bumps": 0.896875,
+          "collision": 0.0
+        },
+        "shuffled": {
+          "n": 320,
+          "success": 0.0,
+          "return": -0.019999999999999997,
+          "steps": 2.0,
+          "contacts": 2.0,
+          "bumps": 2.0,
+          "collision": 0.0
+        },
+        "empty": {
+          "n": 320,
+          "success": 0.484375,
+          "return": 0.4643750000000001,
+          "steps": 2.0,
+          "contacts": 1.0,
+          "bumps": 0.371875,
+          "collision": 0.0
+        },
+        "frozen": {
+          "n": 320,
+          "success": 0.853125,
+          "return": 0.8331250000000001,
+          "steps": 2.0,
+          "contacts": 1.0,
+          "bumps": 0.0,
+          "collision": 0.0
+        },
+        "blind_frozen": {
+          "n": 320,
+          "success": 0.175,
+          "return": 0.15499999999999997,
+          "steps": 2.0,
+          "contacts": 1.328125,
+          "bumps": 0.965625,
+          "collision": 0.0
+        },
+        "reference": {
+          "n": 320,
+          "success": 0.853125,
+          "return": 0.8331250000000001,
+          "steps": 2.0,
+          "contacts": 1.0,
+          "bumps": 0.0,
+          "collision": 0.0
+        }
+      },
+      "reversed/left_blocked": {
+        "conditioned": {
+          "n": 320,
+          "success": 0.903125,
+          "return": 0.883125,
+          "steps": 2.0,
+          "contacts": 1.0,
+          "bumps": 0.0,
+          "collision": 0.0
+        },
+        "action_blind": {
+          "n": 320,
+          "success": 0.1625,
+          "return": 0.1425,
+          "steps": 2.0,
+          "contacts": 1.38125,
+          "bumps": 1.009375,
+          "collision": 0.0
+        },
+        "shuffled": {
+          "n": 320,
+          "success": 0.0,
+          "return": -0.019999999999999997,
+          "steps": 2.0,
+          "contacts": 2.0,
+          "bumps": 2.0,
+          "collision": 0.0
+        },
+        "empty": {
+          "n": 320,
+          "success": 0.484375,
+          "return": 0.4643750000000001,
+          "steps": 2.0,
+          "contacts": 1.009375,
+          "bumps": 0.375,
+          "collision": 0.0
+        },
+        "frozen": {
+          "n": 320,
+          "success": 0.903125,
+          "return": 0.883125,
+          "steps": 2.0,
+          "contacts": 1.0,
+          "bumps": 0.0,
+          "collision": 0.0
+        },
+        "blind_frozen": {
+          "n": 320,
+          "success": 0.153125,
+          "return": 0.133125,
+          "steps": 2.0,
+          "contacts": 1.415625,
+          "bumps": 1.053125,
+          "collision": 0.0
+        },
+        "reference": {
+          "n": 320,
+          "success": 0.903125,
+          "return": 0.883125,
+          "steps": 2.0,
+          "contacts": 1.0,
+          "bumps": 0.0,
+          "collision": 0.0
+        }
+      },
+      "reversed/right_blocked": {
+        "conditioned": {
+          "n": 320,
+          "success": 0.853125,
+          "return": 0.8331250000000001,
+          "steps": 2.0,
+          "contacts": 1.0,
+          "bumps": 0.0,
+          "collision": 0.0
+        },
+        "action_blind": {
+          "n": 320,
+          "success": 0.184375,
+          "return": 0.164375,
+          "steps": 2.0,
+          "contacts": 1.265625,
+          "bumps": 0.925,
+          "collision": 0.0
+        },
+        "shuffled": {
+          "n": 320,
+          "success": 0.0,
+          "return": -0.019999999999999997,
+          "steps": 2.0,
+          "contacts": 2.0,
+          "bumps": 2.0,
+          "collision": 0.0
+        },
+        "empty": {
+          "n": 320,
+          "success": 0.478125,
+          "return": 0.45812500000000006,
+          "steps": 2.0,
+          "contacts": 0.996875,
+          "bumps": 0.378125,
+          "collision": 0.0
+        },
+        "frozen": {
+          "n": 320,
+          "success": 0.853125,
+          "return": 0.8331250000000001,
+          "steps": 2.0,
+          "contacts": 1.0,
+          "bumps": 0.0,
+          "collision": 0.0
+        },
+        "blind_frozen": {
+          "n": 320,
+          "success": 0.16875,
+          "return": 0.14875,
+          "steps": 2.0,
+          "contacts": 1.340625,
+          "bumps": 1.01875,
+          "collision": 0.0
+        },
+        "reference": {
+          "n": 320,
+          "success": 0.853125,
+          "return": 0.8331250000000001,
+          "steps": 2.0,
+          "contacts": 1.0,
+          "bumps": 0.0,
+          "collision": 0.0
+        }
+      }
+    },
+    "first_trial": {
+      "conditioned": {
+        "n": 80,
+        "success": 0.875,
+        "return": 0.8550000000000001,
+        "steps": 2.0,
+        "contacts": 1.0,
+        "bumps": 0.0,
+        "collision": 0.0
+      },
+      "action_blind": {
+        "n": 80,
+        "success": 0.125,
+        "return": 0.10499999999999998,
+        "steps": 2.0,
+        "contacts": 1.45,
+        "bumps": 1.0625,
+        "collision": 0.0
+      },
+      "shuffled": {
+        "n": 80,
+        "success": 0.0,
+        "return": -0.019999999999999997,
+        "steps": 2.0,
+        "contacts": 2.0,
+        "bumps": 2.0,
+        "collision": 0.0
+      },
+      "empty": {
+        "n": 80,
+        "success": 0.0,
+        "return": -0.019999999999999997,
+        "steps": 2.0,
+        "contacts": 1.0,
+        "bumps": 1.0,
+        "collision": 0.0
+      },
+      "frozen": {
+        "n": 80,
+        "success": 0.875,
+        "return": 0.8550000000000001,
+        "steps": 2.0,
+        "contacts": 1.0,
+        "bumps": 0.0,
+        "collision": 0.0
+      },
+      "blind_frozen": {
+        "n": 80,
+        "success": 0.125,
+        "return": 0.10499999999999998,
+        "steps": 2.0,
+        "contacts": 1.45,
+        "bumps": 1.075,
+        "collision": 0.0
+      },
+      "reference": {
+        "n": 80,
+        "success": 0.875,
+        "return": 0.8550000000000001,
+        "steps": 2.0,
+        "contacts": 1.0,
+        "bumps": 0.0,
+        "collision": 0.0
+      }
+    },
+    "learning_curves": {
+      "left_blocked": [
+        {
+          "conditioned": {
+            "n": 80,
+            "success": 0.875,
+            "return": 0.8550000000000001,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "action_blind": {
+            "n": 80,
+            "success": 0.125,
+            "return": 0.10499999999999998,
+            "steps": 2.0,
+            "contacts": 1.45,
+            "bumps": 1.0625,
+            "collision": 0.0
+          },
+          "shuffled": {
+            "n": 80,
+            "success": 0.0,
+            "return": -0.019999999999999997,
+            "steps": 2.0,
+            "contacts": 2.0,
+            "bumps": 2.0,
+            "collision": 0.0
+          },
+          "empty": {
+            "n": 80,
+            "success": 0.0,
+            "return": -0.019999999999999997,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 1.0,
+            "collision": 0.0
+          },
+          "frozen": {
+            "n": 80,
+            "success": 0.875,
+            "return": 0.8550000000000001,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "blind_frozen": {
+            "n": 80,
+            "success": 0.125,
+            "return": 0.10499999999999998,
+            "steps": 2.0,
+            "contacts": 1.45,
+            "bumps": 1.075,
+            "collision": 0.0
+          },
+          "reference": {
+            "n": 80,
+            "success": 0.875,
+            "return": 0.8550000000000001,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          }
+        },
+        {
+          "conditioned": {
+            "n": 80,
+            "success": 0.9,
+            "return": 0.8800000000000001,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "action_blind": {
+            "n": 80,
+            "success": 0.275,
+            "return": 0.255,
+            "steps": 2.0,
+            "contacts": 1.3125,
+            "bumps": 0.85,
+            "collision": 0.0
+          },
+          "shuffled": {
+            "n": 80,
+            "success": 0.0,
+            "return": -0.019999999999999997,
+            "steps": 2.0,
+            "contacts": 2.0,
+            "bumps": 2.0,
+            "collision": 0.0
+          },
+          "empty": {
+            "n": 80,
+            "success": 0.0,
+            "return": -0.019999999999999997,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 1.0,
+            "collision": 0.0
+          },
+          "frozen": {
+            "n": 80,
+            "success": 0.9,
+            "return": 0.8800000000000001,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "blind_frozen": {
+            "n": 80,
+            "success": 0.275,
+            "return": 0.255,
+            "steps": 2.0,
+            "contacts": 1.3125,
+            "bumps": 0.85,
+            "collision": 0.0
+          },
+          "reference": {
+            "n": 80,
+            "success": 0.9,
+            "return": 0.8800000000000001,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          }
+        },
+        {
+          "conditioned": {
+            "n": 80,
+            "success": 0.975,
+            "return": 0.9550000000000001,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "action_blind": {
+            "n": 80,
+            "success": 0.1,
+            "return": 0.07999999999999999,
+            "steps": 2.0,
+            "contacts": 1.35,
+            "bumps": 0.95,
+            "collision": 0.0
+          },
+          "shuffled": {
+            "n": 80,
+            "success": 0.0,
+            "return": -0.019999999999999997,
+            "steps": 2.0,
+            "contacts": 2.0,
+            "bumps": 2.0,
+            "collision": 0.0
+          },
+          "empty": {
+            "n": 80,
+            "success": 0.35,
+            "return": 0.33,
+            "steps": 2.0,
+            "contacts": 0.95,
+            "bumps": 0.3625,
+            "collision": 0.0
+          },
+          "frozen": {
+            "n": 80,
+            "success": 0.975,
+            "return": 0.9550000000000001,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "blind_frozen": {
+            "n": 80,
+            "success": 0.1,
+            "return": 0.07999999999999999,
+            "steps": 2.0,
+            "contacts": 1.3625,
+            "bumps": 0.9875,
+            "collision": 0.0
+          },
+          "reference": {
+            "n": 80,
+            "success": 0.975,
+            "return": 0.9550000000000001,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          }
+        },
+        {
+          "conditioned": {
+            "n": 80,
+            "success": 0.95,
+            "return": 0.9300000000000003,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "action_blind": {
+            "n": 80,
+            "success": 0.225,
+            "return": 0.205,
+            "steps": 2.0,
+            "contacts": 1.425,
+            "bumps": 1.025,
+            "collision": 0.0
+          },
+          "shuffled": {
+            "n": 80,
+            "success": 0.0,
+            "return": -0.019999999999999997,
+            "steps": 2.0,
+            "contacts": 2.0,
+            "bumps": 2.0,
+            "collision": 0.0
+          },
+          "empty": {
+            "n": 80,
+            "success": 0.2875,
+            "return": 0.26749999999999996,
+            "steps": 2.0,
+            "contacts": 0.75,
+            "bumps": 0.3,
+            "collision": 0.0
+          },
+          "frozen": {
+            "n": 80,
+            "success": 0.95,
+            "return": 0.9300000000000003,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "blind_frozen": {
+            "n": 80,
+            "success": 0.2,
+            "return": 0.18,
+            "steps": 2.0,
+            "contacts": 1.4,
+            "bumps": 1.025,
+            "collision": 0.0
+          },
+          "reference": {
+            "n": 80,
+            "success": 0.95,
+            "return": 0.9300000000000003,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          }
+        },
+        {
+          "conditioned": {
+            "n": 80,
+            "success": 0.8,
+            "return": 0.78,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "action_blind": {
+            "n": 80,
+            "success": 0.175,
+            "return": 0.15499999999999997,
+            "steps": 2.0,
+            "contacts": 1.3625,
+            "bumps": 0.95,
+            "collision": 0.0
+          },
+          "shuffled": {
+            "n": 80,
+            "success": 0.0,
+            "return": -0.019999999999999997,
+            "steps": 2.0,
+            "contacts": 2.0,
+            "bumps": 2.0,
+            "collision": 0.0
+          },
+          "empty": {
+            "n": 80,
+            "success": 0.7,
+            "return": 0.68,
+            "steps": 2.0,
+            "contacts": 1.1375,
+            "bumps": 0.1375,
+            "collision": 0.0
+          },
+          "frozen": {
+            "n": 80,
+            "success": 0.8,
+            "return": 0.78,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "blind_frozen": {
+            "n": 80,
+            "success": 0.125,
+            "return": 0.10499999999999998,
+            "steps": 2.0,
+            "contacts": 1.4,
+            "bumps": 1.0875,
+            "collision": 0.0
+          },
+          "reference": {
+            "n": 80,
+            "success": 0.8,
+            "return": 0.78,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          }
+        },
+        {
+          "conditioned": {
+            "n": 80,
+            "success": 0.95,
+            "return": 0.93,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "action_blind": {
+            "n": 80,
+            "success": 0.2125,
+            "return": 0.19249999999999998,
+            "steps": 2.0,
+            "contacts": 1.35,
+            "bumps": 0.9375,
+            "collision": 0.0
+          },
+          "shuffled": {
+            "n": 80,
+            "success": 0.0,
+            "return": -0.019999999999999997,
+            "steps": 2.0,
+            "contacts": 2.0,
+            "bumps": 2.0,
+            "collision": 0.0
+          },
+          "empty": {
+            "n": 80,
+            "success": 0.7625,
+            "return": 0.7425,
+            "steps": 2.0,
+            "contacts": 1.2,
+            "bumps": 0.2,
+            "collision": 0.0
+          },
+          "frozen": {
+            "n": 80,
+            "success": 0.95,
+            "return": 0.93,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "blind_frozen": {
+            "n": 80,
+            "success": 0.2125,
+            "return": 0.19249999999999998,
+            "steps": 2.0,
+            "contacts": 1.5125,
+            "bumps": 1.1125,
+            "collision": 0.0
+          },
+          "reference": {
+            "n": 80,
+            "success": 0.95,
+            "return": 0.93,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          }
+        },
+        {
+          "conditioned": {
+            "n": 80,
+            "success": 0.95,
+            "return": 0.93,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "action_blind": {
+            "n": 80,
+            "success": 0.1875,
+            "return": 0.16749999999999998,
+            "steps": 2.0,
+            "contacts": 1.4625,
+            "bumps": 1.025,
+            "collision": 0.0
+          },
+          "shuffled": {
+            "n": 80,
+            "success": 0.0,
+            "return": -0.019999999999999997,
+            "steps": 2.0,
+            "contacts": 2.0,
+            "bumps": 2.0,
+            "collision": 0.0
+          },
+          "empty": {
+            "n": 80,
+            "success": 0.95,
+            "return": 0.93,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "frozen": {
+            "n": 80,
+            "success": 0.95,
+            "return": 0.93,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "blind_frozen": {
+            "n": 80,
+            "success": 0.1875,
+            "return": 0.16749999999999998,
+            "steps": 2.0,
+            "contacts": 1.5,
+            "bumps": 1.0625,
+            "collision": 0.0
+          },
+          "reference": {
+            "n": 80,
+            "success": 0.95,
+            "return": 0.93,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          }
+        },
+        {
+          "conditioned": {
+            "n": 80,
+            "success": 0.825,
+            "return": 0.805,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "action_blind": {
+            "n": 80,
+            "success": 0.125,
+            "return": 0.10499999999999998,
+            "steps": 2.0,
+            "contacts": 1.2375,
+            "bumps": 0.875,
+            "collision": 0.0
+          },
+          "shuffled": {
+            "n": 80,
+            "success": 0.0,
+            "return": -0.019999999999999997,
+            "steps": 2.0,
+            "contacts": 2.0,
+            "bumps": 2.0,
+            "collision": 0.0
+          },
+          "empty": {
+            "n": 80,
+            "success": 0.825,
+            "return": 0.805,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "frozen": {
+            "n": 80,
+            "success": 0.825,
+            "return": 0.805,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "blind_frozen": {
+            "n": 80,
+            "success": 0.125,
+            "return": 0.10499999999999998,
+            "steps": 2.0,
+            "contacts": 1.3,
+            "bumps": 0.9375,
+            "collision": 0.0
+          },
+          "reference": {
+            "n": 80,
+            "success": 0.825,
+            "return": 0.805,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          }
+        }
+      ],
+      "right_blocked": [
+        {
+          "conditioned": {
+            "n": 80,
+            "success": 0.75,
+            "return": 0.7300000000000001,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "action_blind": {
+            "n": 80,
+            "success": 0.1875,
+            "return": 0.16749999999999998,
+            "steps": 2.0,
+            "contacts": 1.275,
+            "bumps": 0.95,
+            "collision": 0.0
+          },
+          "shuffled": {
+            "n": 80,
+            "success": 0.0,
+            "return": -0.019999999999999997,
+            "steps": 2.0,
+            "contacts": 2.0,
+            "bumps": 2.0,
+            "collision": 0.0
+          },
+          "empty": {
+            "n": 80,
+            "success": 0.0,
+            "return": -0.019999999999999997,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 1.0,
+            "collision": 0.0
+          },
+          "frozen": {
+            "n": 80,
+            "success": 0.75,
+            "return": 0.7300000000000001,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "blind_frozen": {
+            "n": 80,
+            "success": 0.1875,
+            "return": 0.16749999999999998,
+            "steps": 2.0,
+            "contacts": 1.3,
+            "bumps": 0.975,
+            "collision": 0.0
+          },
+          "reference": {
+            "n": 80,
+            "success": 0.75,
+            "return": 0.7300000000000001,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          }
+        },
+        {
+          "conditioned": {
+            "n": 80,
+            "success": 0.875,
+            "return": 0.8550000000000001,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "action_blind": {
+            "n": 80,
+            "success": 0.2125,
+            "return": 0.19249999999999998,
+            "steps": 2.0,
+            "contacts": 1.375,
+            "bumps": 0.9375,
+            "collision": 0.0
+          },
+          "shuffled": {
+            "n": 80,
+            "success": 0.0,
+            "return": -0.019999999999999997,
+            "steps": 2.0,
+            "contacts": 2.0,
+            "bumps": 2.0,
+            "collision": 0.0
+          },
+          "empty": {
+            "n": 80,
+            "success": 0.0,
+            "return": -0.019999999999999997,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 1.0,
+            "collision": 0.0
+          },
+          "frozen": {
+            "n": 80,
+            "success": 0.875,
+            "return": 0.8550000000000001,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "blind_frozen": {
+            "n": 80,
+            "success": 0.2125,
+            "return": 0.19249999999999998,
+            "steps": 2.0,
+            "contacts": 1.375,
+            "bumps": 0.9375,
+            "collision": 0.0
+          },
+          "reference": {
+            "n": 80,
+            "success": 0.875,
+            "return": 0.8550000000000001,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          }
+        },
+        {
+          "conditioned": {
+            "n": 80,
+            "success": 0.9,
+            "return": 0.8800000000000001,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "action_blind": {
+            "n": 80,
+            "success": 0.15,
+            "return": 0.12999999999999998,
+            "steps": 2.0,
+            "contacts": 1.3125,
+            "bumps": 1.0375,
+            "collision": 0.0
+          },
+          "shuffled": {
+            "n": 80,
+            "success": 0.0,
+            "return": -0.019999999999999997,
+            "steps": 2.0,
+            "contacts": 2.0,
+            "bumps": 2.0,
+            "collision": 0.0
+          },
+          "empty": {
+            "n": 80,
+            "success": 0.2875,
+            "return": 0.26749999999999996,
+            "steps": 2.0,
+            "contacts": 0.75,
+            "bumps": 0.3,
+            "collision": 0.0
+          },
+          "frozen": {
+            "n": 80,
+            "success": 0.9,
+            "return": 0.8800000000000001,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "blind_frozen": {
+            "n": 80,
+            "success": 0.1375,
+            "return": 0.11749999999999998,
+            "steps": 2.0,
+            "contacts": 1.4125,
+            "bumps": 1.15,
+            "collision": 0.0
+          },
+          "reference": {
+            "n": 80,
+            "success": 0.9,
+            "return": 0.8800000000000001,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          }
+        },
+        {
+          "conditioned": {
+            "n": 80,
+            "success": 0.8,
+            "return": 0.78,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "action_blind": {
+            "n": 80,
+            "success": 0.1875,
+            "return": 0.1675,
+            "steps": 2.0,
+            "contacts": 1.0875,
+            "bumps": 0.7375,
+            "collision": 0.0
+          },
+          "shuffled": {
+            "n": 80,
+            "success": 0.0,
+            "return": -0.019999999999999997,
+            "steps": 2.0,
+            "contacts": 2.0,
+            "bumps": 2.0,
+            "collision": 0.0
+          },
+          "empty": {
+            "n": 80,
+            "success": 0.325,
+            "return": 0.305,
+            "steps": 2.0,
+            "contacts": 0.9375,
+            "bumps": 0.4,
+            "collision": 0.0
+          },
+          "frozen": {
+            "n": 80,
+            "success": 0.8,
+            "return": 0.78,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "blind_frozen": {
+            "n": 80,
+            "success": 0.1875,
+            "return": 0.1675,
+            "steps": 2.0,
+            "contacts": 1.0625,
+            "bumps": 0.725,
+            "collision": 0.0
+          },
+          "reference": {
+            "n": 80,
+            "success": 0.8,
+            "return": 0.78,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          }
+        },
+        {
+          "conditioned": {
+            "n": 80,
+            "success": 0.85,
+            "return": 0.8300000000000001,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "action_blind": {
+            "n": 80,
+            "success": 0.175,
+            "return": 0.15499999999999997,
+            "steps": 2.0,
+            "contacts": 1.2,
+            "bumps": 0.85,
+            "collision": 0.0
+          },
+          "shuffled": {
+            "n": 80,
+            "success": 0.0,
+            "return": -0.019999999999999997,
+            "steps": 2.0,
+            "contacts": 2.0,
+            "bumps": 2.0,
+            "collision": 0.0
+          },
+          "empty": {
+            "n": 80,
+            "success": 0.675,
+            "return": 0.655,
+            "steps": 2.0,
+            "contacts": 1.2,
+            "bumps": 0.2,
+            "collision": 0.0
+          },
+          "frozen": {
+            "n": 80,
+            "success": 0.85,
+            "return": 0.8300000000000001,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "blind_frozen": {
+            "n": 80,
+            "success": 0.1625,
+            "return": 0.1425,
+            "steps": 2.0,
+            "contacts": 1.3375,
+            "bumps": 0.975,
+            "collision": 0.0
+          },
+          "reference": {
+            "n": 80,
+            "success": 0.85,
+            "return": 0.8300000000000001,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          }
+        },
+        {
+          "conditioned": {
+            "n": 80,
+            "success": 0.925,
+            "return": 0.905,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "action_blind": {
+            "n": 80,
+            "success": 0.1875,
+            "return": 0.16749999999999998,
+            "steps": 2.0,
+            "contacts": 1.3625,
+            "bumps": 0.975,
+            "collision": 0.0
+          },
+          "shuffled": {
+            "n": 80,
+            "success": 0.0,
+            "return": -0.019999999999999997,
+            "steps": 2.0,
+            "contacts": 2.0,
+            "bumps": 2.0,
+            "collision": 0.0
+          },
+          "empty": {
+            "n": 80,
+            "success": 0.8375,
+            "return": 0.8175000000000001,
+            "steps": 2.0,
+            "contacts": 1.1,
+            "bumps": 0.1,
+            "collision": 0.0
+          },
+          "frozen": {
+            "n": 80,
+            "success": 0.925,
+            "return": 0.905,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "blind_frozen": {
+            "n": 80,
+            "success": 0.175,
+            "return": 0.15499999999999997,
+            "steps": 2.0,
+            "contacts": 1.475,
+            "bumps": 1.1,
+            "collision": 0.0
+          },
+          "reference": {
+            "n": 80,
+            "success": 0.925,
+            "return": 0.905,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          }
+        },
+        {
+          "conditioned": {
+            "n": 80,
+            "success": 0.875,
+            "return": 0.8550000000000001,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "action_blind": {
+            "n": 80,
+            "success": 0.1375,
+            "return": 0.11749999999999998,
+            "steps": 2.0,
+            "contacts": 1.275,
+            "bumps": 0.975,
+            "collision": 0.0
+          },
+          "shuffled": {
+            "n": 80,
+            "success": 0.0,
+            "return": -0.019999999999999997,
+            "steps": 2.0,
+            "contacts": 2.0,
+            "bumps": 2.0,
+            "collision": 0.0
+          },
+          "empty": {
+            "n": 80,
+            "success": 0.875,
+            "return": 0.8550000000000001,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "frozen": {
+            "n": 80,
+            "success": 0.875,
+            "return": 0.8550000000000001,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "blind_frozen": {
+            "n": 80,
+            "success": 0.125,
+            "return": 0.10499999999999998,
+            "steps": 2.0,
+            "contacts": 1.45,
+            "bumps": 1.175,
+            "collision": 0.0
+          },
+          "reference": {
+            "n": 80,
+            "success": 0.875,
+            "return": 0.8550000000000001,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          }
+        },
+        {
+          "conditioned": {
+            "n": 80,
+            "success": 0.85,
+            "return": 0.8300000000000001,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "action_blind": {
+            "n": 80,
+            "success": 0.2,
+            "return": 0.18,
+            "steps": 2.0,
+            "contacts": 1.2125,
+            "bumps": 0.825,
+            "collision": 0.0
+          },
+          "shuffled": {
+            "n": 80,
+            "success": 0.0,
+            "return": -0.019999999999999997,
+            "steps": 2.0,
+            "contacts": 2.0,
+            "bumps": 2.0,
+            "collision": 0.0
+          },
+          "empty": {
+            "n": 80,
+            "success": 0.85,
+            "return": 0.8300000000000001,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "frozen": {
+            "n": 80,
+            "success": 0.85,
+            "return": 0.8300000000000001,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          },
+          "blind_frozen": {
+            "n": 80,
+            "success": 0.1875,
+            "return": 0.16749999999999998,
+            "steps": 2.0,
+            "contacts": 1.2625,
+            "bumps": 0.9,
+            "collision": 0.0
+          },
+          "reference": {
+            "n": 80,
+            "success": 0.85,
+            "return": 0.8300000000000001,
+            "steps": 2.0,
+            "contacts": 1.0,
+            "bumps": 0.0,
+            "collision": 0.0
+          }
+        }
+      ]
+    },
+    "prediction": {
+      "conditioned": {
+        "joint_loss": 0.025177871990718366,
+        "object_loss": 0.00762072025569317
+      },
+      "action_blind": {
+        "joint_loss": 0.8577952458979873,
+        "object_loss": 0.8359675822158807
+      },
+      "shuffled": {
+        "joint_loss": 5.3032925615367335,
+        "object_loss": 5.285735409801709
+      },
+      "empty": {
+        "joint_loss": 1.777674030744707,
+        "object_loss": 0.8958797346140275
+      }
+    },
+    "paired": {
+      "action_blind": {
+        "success_gain": {
+          "mean": 0.69921875,
+          "seed_differences": [
+            0.625,
+            0.75,
+            0.625,
+            0.625,
+            0.6875,
+            0.53125,
+            0.71875,
+            0.65625,
+            0.75,
+            0.71875,
+            0.625,
+            0.625,
+            0.6875,
+            0.90625,
+            0.6875,
+            0.75,
+            0.75,
+            0.625,
+            0.8125,
+            0.6875,
+            0.75,
+            0.65625,
+            0.65625,
+            0.6875,
+            0.75,
+            0.71875,
+            0.78125,
+            0.8125,
+            0.65625,
+            0.71875,
+            0.78125,
+            0.6875,
+            0.75,
+            0.5625,
+            0.6875,
+            0.5625,
+            0.8125,
+            0.65625,
+            0.71875,
+            0.71875
+          ],
+          "bootstrap_95": [
+            0.67578125,
+            0.72265625
+          ]
+        },
+        "loss_reduction": {
+          "joint_loss": {
+            "mean": 0.832617373907269,
+            "seed_differences": [
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269,
+              0.832617373907269
+            ],
+            "bootstrap_95": [
+              0.832617373907269,
+              0.832617373907269
+            ]
+          },
+          "object_loss": {
+            "mean": 0.8283468619601877,
+            "seed_differences": [
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876,
+              0.8283468619601876
+            ],
+            "bootstrap_95": [
+              0.8283468619601877,
+              0.8283468619601877
+            ]
+          }
+        }
+      },
+      "shuffled": {
+        "success_gain": {
+          "mean": 0.878125,
+          "seed_differences": [
+            0.8125,
+            1.0,
+            0.875,
+            0.8125,
+            0.875,
+            0.75,
+            0.875,
+            0.875,
+            0.9375,
+            0.8125,
+            0.75,
+            0.875,
+            0.875,
+            1.0,
+            0.9375,
+            0.9375,
+            1.0,
+            0.8125,
+            0.9375,
+            0.8125,
+            0.9375,
+            0.875,
+            0.8125,
+            0.875,
+            0.8125,
+            0.9375,
+            0.9375,
+            0.9375,
+            0.8125,
+            0.875,
+            0.9375,
+            0.875,
+            0.875,
+            0.75,
+            0.9375,
+            0.75,
+            1.0,
+            0.8125,
+            0.9375,
+            0.875
+          ],
+          "bootstrap_95": [
+            0.8546875,
+            0.9
+          ]
+        },
+        "loss_reduction": {
+          "joint_loss": {
+            "mean": 5.278114689546015,
+            "seed_differences": [
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015
+            ],
+            "bootstrap_95": [
+              5.278114689546015,
+              5.278114689546015
+            ]
+          },
+          "object_loss": {
+            "mean": 5.278114689546015,
+            "seed_differences": [
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015,
+              5.278114689546015
+            ],
+            "bootstrap_95": [
+              5.278114689546015,
+              5.278114689546015
+            ]
+          }
+        }
+      },
+      "empty": {
+        "success_gain": {
+          "mean": 0.3953125,
+          "seed_differences": [
+            0.34375,
+            0.4375,
+            0.40625,
+            0.28125,
+            0.5,
+            0.28125,
+            0.4375,
+            0.4375,
+            0.375,
+            0.375,
+            0.34375,
+            0.25,
+            0.28125,
+            0.5,
+            0.34375,
+            0.4375,
+            0.4375,
+            0.4375,
+            0.375,
+            0.40625,
+            0.4375,
+            0.40625,
+            0.40625,
+            0.3125,
+            0.4375,
+            0.375,
+            0.5,
+            0.375,
+            0.375,
+            0.46875,
+            0.375,
+            0.5,
+            0.375,
+            0.25,
+            0.375,
+            0.375,
+            0.4375,
+            0.40625,
+            0.5,
+            0.4375
+          ],
+          "bootstrap_95": [
+            0.37421875,
+            0.415625
+          ]
+        },
+        "loss_reduction": {
+          "joint_loss": {
+            "mean": 1.752496158753989,
+            "seed_differences": [
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887,
+              1.7524961587539887
+            ],
+            "bootstrap_95": [
+              1.752496158753989,
+              1.752496158753989
+            ]
+          },
+          "object_loss": {
+            "mean": 0.8882590143583343,
+            "seed_differences": [
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343,
+              0.8882590143583343
+            ],
+            "bootstrap_95": [
+              0.8882590143583343,
+              0.8882590143583343
+            ]
+          }
+        }
+      }
+    },
+    "research_gates": {
+      "action_blind": true,
+      "shuffled": true
+    }
+  }
+}

@@ -1,4 +1,12 @@
-# EFI Research Roadmap
+# EFI historical research roadmap
+
+**Historical plan, superseded by the [ordered research stories](RESEARCH_STORIES.md).**
+The text below records the earlier potential-composition and affect roadmap;
+its “current state,” scaling limitations, and proposed mechanisms describe
+that earlier stage. Use the [current reports](README.md#read-the-research)
+for implemented capabilities and the
+[online intelligence design](ONLINE_INTELLIGENCE_DESIGN.md) for the later
+architecture. The active next work is listed in the research stories.
 
 ## Vision
 
