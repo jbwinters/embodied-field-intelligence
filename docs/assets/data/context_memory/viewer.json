@@ -1,0 +1,21 @@
+{
+  "frames": 972,
+  "chapters": 5,
+  "policies_commands_narration_prediction_bounds_exact": true,
+  "controls": [
+    "next",
+    "previous",
+    "chapters",
+    "play/pause",
+    "seek",
+    "policy toggle",
+    "field zoom",
+    "pinned probe"
+  ],
+  "mobile": {
+    "width": 390,
+    "scroll": 390,
+    "panels": 6
+  },
+  "console_errors_and_warnings": []
+}

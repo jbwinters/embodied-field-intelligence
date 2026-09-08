@@ -40,6 +40,8 @@ def test_recognition_reuses_a_retained_model_after_real_feedback():
     model.active[:2] = True
     model.archives[0, 0, 2, 22] = 30
     model.archives[1, 0, 2, 23] = 30
+    model.archives[0, 0, 3, 23] = 30
+    model.archives[1, 0, 3, 22] = 30
     model.counts[0, 2, 22] = 2
     model.weights[:] = [0.05, 0.94, 0.01, 0]
     old = model.archives[0].copy()
@@ -49,6 +51,10 @@ def test_recognition_reuses_a_retained_model_after_real_feedback():
     assert np.max(np.abs(model.archives[0] - old)) < 0.001
     assert np.argmax(model.table()[0, 2]) == 23
     assert model.observed == 2
+    # Feedback for command 2 also changes the prediction for command 3,
+    # without collecting new command-3 evidence: applicability links rows.
+    assert np.argmax(model.table()[0, 3]) == 22
+    assert model.counts[0, 3].sum() == 0
 
 
 def test_missing_feedback_and_frozen_calls_cannot_create_empirical_support():
@@ -117,6 +123,19 @@ def test_imagination_and_distant_memory_cannot_change_local_evidence_or_policy()
             agent.think()
         assert np.array_equal(before, agent.schema.archives)
         assert agent.schema.observed == 0
+    np.testing.assert_allclose(agents[0].action_values, agents[1].action_values)
+    for agent in agents:
+        agent.select_action(forced=2)
+    observation, _, _, info = env.step(2)
+    for agent in agents:
+        agent.after_env_step(info["displacement"])
+        agent.observe(observation)
+        agent.think()
+        assert agent.schema.observed == 1
+    for field in ("counts", "archives", "weights"):
+        np.testing.assert_array_equal(
+            getattr(agents[0].schema, field), getattr(agents[1].schema, field)
+        )
     np.testing.assert_allclose(agents[0].action_values, agents[1].action_values)
 
 

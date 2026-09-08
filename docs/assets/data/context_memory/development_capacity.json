@@ -1,0 +1,284 @@
+{
+  "protocol": {
+    "seeds": 2,
+    "base_seed": 52000,
+    "memory": {
+      "capacity": 3,
+      "fast_retention": 0.1,
+      "slow_rate": 0.02,
+      "hazard": 0.2,
+      "fast_prior": 0.5,
+      "validation_window": 8,
+      "validation_loss": 0.35,
+      "separation": 0.12,
+      "usage_retention": 0.995
+    },
+    "scope": "One physical stream per seed/load. Replayed bounded schema observers; no added experience or field execution for each capacity. All contacts charged."
+  },
+  "summary": [
+    {
+      "conditions": 2,
+      "capacity": 1,
+      "wrong": {
+        "bank": 0.46875,
+        "no_reuse": 0.40625
+      },
+      "no_reuse_minus_bank": {
+        "mean": -0.0625,
+        "bootstrap_95": [
+          -0.0625,
+          -0.0625
+        ],
+        "seed_differences": [
+          -0.0625,
+          -0.0625
+        ]
+      },
+      "incomplete_windows": 0,
+      "mean_evictions": 3.0,
+      "storage_bytes": 16025
+    },
+    {
+      "conditions": 2,
+      "capacity": 3,
+      "wrong": {
+        "bank": 0.125,
+        "no_reuse": 0.40625
+      },
+      "no_reuse_minus_bank": {
+        "mean": 0.28125,
+        "bootstrap_95": [
+          0.25,
+          0.3125
+        ],
+        "seed_differences": [
+          0.3125,
+          0.25
+        ]
+      },
+      "incomplete_windows": 0,
+      "mean_evictions": 0.0,
+      "storage_bytes": 32059
+    },
+    {
+      "conditions": 2,
+      "capacity": 6,
+      "wrong": {
+        "bank": 0.125,
+        "no_reuse": 0.40625
+      },
+      "no_reuse_minus_bank": {
+        "mean": 0.28125,
+        "bootstrap_95": [
+          0.25,
+          0.3125
+        ],
+        "seed_differences": [
+          0.3125,
+          0.25
+        ]
+      },
+      "incomplete_windows": 0,
+      "mean_evictions": 0.0,
+      "storage_bytes": 56110
+    },
+    {
+      "conditions": 3,
+      "capacity": 1,
+      "wrong": {
+        "bank": 0.5,
+        "no_reuse": 0.5
+      },
+      "no_reuse_minus_bank": {
+        "mean": 0.0,
+        "bootstrap_95": [
+          0.0,
+          0.0
+        ],
+        "seed_differences": [
+          0.0,
+          0.0
+        ]
+      },
+      "incomplete_windows": 0,
+      "mean_evictions": 6.5,
+      "storage_bytes": 16025
+    },
+    {
+      "conditions": 3,
+      "capacity": 3,
+      "wrong": {
+        "bank": 0.35416666666666663,
+        "no_reuse": 0.5
+      },
+      "no_reuse_minus_bank": {
+        "mean": 0.14583333333333331,
+        "bootstrap_95": [
+          0.08333333333333331,
+          0.20833333333333331
+        ],
+        "seed_differences": [
+          0.20833333333333331,
+          0.08333333333333331
+        ]
+      },
+      "incomplete_windows": 0,
+      "mean_evictions": 3.5,
+      "storage_bytes": 32059
+    },
+    {
+      "conditions": 3,
+      "capacity": 6,
+      "wrong": {
+        "bank": 0.2708333333333333,
+        "no_reuse": 0.5
+      },
+      "no_reuse_minus_bank": {
+        "mean": 0.22916666666666663,
+        "bootstrap_95": [
+          0.20833333333333331,
+          0.24999999999999997
+        ],
+        "seed_differences": [
+          0.20833333333333331,
+          0.24999999999999997
+        ]
+      },
+      "incomplete_windows": 0,
+      "mean_evictions": 0.0,
+      "storage_bytes": 56110
+    },
+    {
+      "conditions": 5,
+      "capacity": 1,
+      "wrong": {
+        "bank": 0.41250000000000003,
+        "no_reuse": 0.4
+      },
+      "no_reuse_minus_bank": {
+        "mean": -0.012500000000000011,
+        "bootstrap_95": [
+          -0.025000000000000022,
+          0.0
+        ],
+        "seed_differences": [
+          0.0,
+          -0.025000000000000022
+        ]
+      },
+      "incomplete_windows": 0,
+      "mean_evictions": 10.5,
+      "storage_bytes": 16025
+    },
+    {
+      "conditions": 5,
+      "capacity": 3,
+      "wrong": {
+        "bank": 0.375,
+        "no_reuse": 0.4
+      },
+      "no_reuse_minus_bank": {
+        "mean": 0.025000000000000022,
+        "bootstrap_95": [
+          0.0,
+          0.050000000000000044
+        ],
+        "seed_differences": [
+          0.0,
+          0.050000000000000044
+        ]
+      },
+      "incomplete_windows": 0,
+      "mean_evictions": 8.5,
+      "storage_bytes": 32059
+    },
+    {
+      "conditions": 5,
+      "capacity": 6,
+      "wrong": {
+        "bank": 0.3125,
+        "no_reuse": 0.4
+      },
+      "no_reuse_minus_bank": {
+        "mean": 0.08750000000000002,
+        "bootstrap_95": [
+          0.025000000000000022,
+          0.15000000000000002
+        ],
+        "seed_differences": [
+          0.025000000000000022,
+          0.15000000000000002
+        ]
+      },
+      "incomplete_windows": 0,
+      "mean_evictions": 2.5,
+      "storage_bytes": 56110
+    },
+    {
+      "conditions": 8,
+      "capacity": 1,
+      "wrong": {
+        "bank": 0.375,
+        "no_reuse": 0.3359375
+      },
+      "no_reuse_minus_bank": {
+        "mean": -0.0390625,
+        "bootstrap_95": [
+          -0.0625,
+          -0.015625
+        ],
+        "seed_differences": [
+          -0.015625,
+          -0.0625
+        ]
+      },
+      "incomplete_windows": 0,
+      "mean_evictions": 17.5,
+      "storage_bytes": 16025
+    },
+    {
+      "conditions": 8,
+      "capacity": 3,
+      "wrong": {
+        "bank": 0.3671875,
+        "no_reuse": 0.3359375
+      },
+      "no_reuse_minus_bank": {
+        "mean": -0.03125,
+        "bootstrap_95": [
+          -0.046875,
+          -0.015625
+        ],
+        "seed_differences": [
+          -0.046875,
+          -0.015625
+        ]
+      },
+      "incomplete_windows": 0,
+      "mean_evictions": 14.5,
+      "storage_bytes": 32059
+    },
+    {
+      "conditions": 8,
+      "capacity": 6,
+      "wrong": {
+        "bank": 0.34375,
+        "no_reuse": 0.3359375
+      },
+      "no_reuse_minus_bank": {
+        "mean": -0.0078125,
+        "bootstrap_95": [
+          -0.03125,
+          0.015625
+        ],
+        "seed_differences": [
+          -0.03125,
+          0.015625
+        ]
+      },
+      "incomplete_windows": 0,
+      "mean_evictions": 9.5,
+      "storage_bytes": 56110
+    }
+  ]
+}

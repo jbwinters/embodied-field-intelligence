@@ -1,0 +1,14 @@
+/home/josh/.config/matplotlib is not a writable directory
+Matplotlib created a temporary cache directory at /tmp/matplotlib-ldrm0cb3 because there was an issue with the default path (/home/josh/.config/matplotlib); it is highly recommended to set the MPLCONFIGDIR environment variable to a writable directory, in particular to speed up the import of Matplotlib and to better support multiprocessing.
+equivalence bank 0.0 0
+equivalence fast 0.0 0
+equivalence no_reuse 0.0 0
+equivalence no_history 0.0 0
+0.03 0.1 return 0.28125 returngainfast [0.35625, 0.6] gainnr [0.0875, 0.3125] newexcess [0.125, 0.2] newloss [0.09537268862691048, 0.2363395221551747]
+0.1 0.3 return 0.2875 returngainfast [0.35625, 0.59375] gainnr [0.0625, 0.33125] newexcess [0.125, 0.2] newloss [0.09768513284521776, 0.15867079122774033]
+0.2 0.5 return 0.3 returngainfast [0.35, 0.575] gainnr [0.05625, 0.3125] newexcess [0.125, 0.2] newloss [0.032750906932371655, 0.0948285395391049]
+0.3 0.5 return 0.3 returngainfast [0.35, 0.56875] gainnr [0.0625, 0.30640624999999777] newexcess [0.1375, 0.225] newloss [0.05695887487480782, 0.12044592088574962]
+0.5 0.5 return 0.34375 returngainfast [0.31875, 0.525] gainnr [0.05, 0.23125] newexcess [0.1375, 0.225] newloss [0.09981253448034079, 0.17067898562482953]
+0.2 0.8 return 0.3375 returngainfast [0.3125, 0.53125] gainnr [0.03125, 0.25625] newexcess [0.075, 0.175] newloss [-0.06731148082800034, 0.009313793383352253]
+0.5 0.8 return 0.43125 returngainfast [0.25, 0.425] gainnr [-0.01875, 0.13125] newexcess [0.09375, 0.18125] newloss [-0.07003551320617946, 0.008392532600511201]
+0.8 0.8 return 0.5125 returngainfast [0.18125, 0.33125] gainnr [-0.075, 0.0125] newexcess [0.09375, 0.18125] newloss [-0.049460447553987666, 0.02184376987071015]
