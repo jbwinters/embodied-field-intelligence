@@ -8,6 +8,7 @@ next architectural proposals.
 
 | Recording | What to look for | Open the file |
 |---|---|---|
+| EFI-02 returning-context memory · complete lifetime | A bounded model bank learns across five response segments. Recall improves, but the autonomous behavior gate remains open. | [Context replay](assets/interactive/context_memory.html) |
 | EFI-01 command consequences · 56 frames | Two commands hold the body still but move the block differently. Six chapter groups compare acquired and command-blind evidence. | [Command replay](assets/interactive/command_contact.html) |
 | Continuous contact learning · 180 moves, about 90 seconds | One agent starts with empty evidence, encounters obstacles, and learns through two changes in object response. Jump to move 120 and step forward. | [Long replay](assets/interactive/interaction_long.html) |
 | Controlled contact trials · 28 frames | Selected source contacts, then acquired-versus-empty target attempts. These are separate scenes, with omitted source interventions labeled. | [Short replay](assets/interactive/interaction.html) |
@@ -43,6 +44,9 @@ After [installation](../README.md#installation), run commands from the repositor
 # Longer continuous contact example; open runs/contact-demo/episode.html
 python cli.py contact-demo --seed 6 --max-steps 180 --out runs/contact-demo
 
+# Quick EFI-02 run; open runs/context-smoke/episode.html
+python cli.py context-memory --seeds 1 --seed 71020 --out runs/context-smoke
+
 # Quick EFI-01 run; open runs/command-smoke/episode.html
 python cli.py command-contact --seeds 1 --episodes 2 --seed 31010 --out runs/command-smoke
 
@@ -65,11 +69,12 @@ opt-in; they have not been unified into one agent with all earlier capabilities.
 | Start with | Covers |
 |---|---|
 | [Ordered research stories](RESEARCH_STORIES.md) | Active sequence from action consequences and retention through composition, social learning, shared signaling, and grounded language; experiments and acceptance criteria for each |
+| [EFI-02: returning-context memory](CONTEXT_MEMORY.md) | Recall gain, failed behavioral gate, all controls, capacity limits, preserved results, and a full original-viewer lifetime |
 | [EFI-01: command consequences](COMMAND_CONSEQUENCES.md) | Matched-body-feedback evidence for command-specific learning, all seven controls, source costs, preserved evaluations, and original-viewer replay |
 | [Contact learning](INTERACTION_LEARNING.md) | Current implementation, a viewer walkthrough, held-out controls, CPU/memory costs, and limitations |
 | [Predictive crossing](PREDICTIVE_CONTROL.md) | Learning to anticipate moving hazards and adapt after their motion changes |
 | [Motion transfer](PREDICTIVE_TRANSFER.md) | Reusing acquired motion across object roles and room geometry |
-| [Online intelligence design](ONLINE_INTELLIGENCE_DESIGN.md) | Architecture and staged gates; contact is implemented, recurring-context retention and learned-skill composition remain proposals |
+| [Online intelligence design](ONLINE_INTELLIGENCE_DESIGN.md) | Architecture and staged gates; contact is implemented; EFI-02 has a measured recall gain and an open behavioral gate; composition remains proposed |
 | [Independent design review](ONLINE_INTELLIGENCE_REVIEW.md) | Critiques and the design's responses |
 | [Foraging theory](THEORY.md) | The current foraging value recursion and its local implementation |
 | [Earlier experiment report](EXPERIMENT_REPORT.md) | Historical experiments; these are separate from the newer pilots |

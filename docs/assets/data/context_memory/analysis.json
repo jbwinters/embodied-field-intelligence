@@ -1,0 +1,277 @@
+{
+  "scope": "Descriptive trajectory analysis after held-out evaluation; not a causal isolation or parameter-selection experiment.",
+  "delays": {
+    "0": {
+      "modes": {
+        "bank": {
+          "phases_with_fewer_than_eight_contacts": 61,
+          "return_phases_with_fewer_than_eight_contacts": 33,
+          "mean_longest_no_collection_run": 465.175,
+          "mean_longest_no_contact_run": 404.925,
+          "mean_longest_wait_run": 3.65,
+          "mean_final_active_archives": 2.475,
+          "mean_admissions": 2.7,
+          "mean_evictions": 0.225,
+          "mean_collections_by_phase": [
+            47.025,
+            38.35,
+            33.15,
+            20.4,
+            21.65
+          ]
+        },
+        "fast": {
+          "phases_with_fewer_than_eight_contacts": 64,
+          "return_phases_with_fewer_than_eight_contacts": 34,
+          "mean_longest_no_collection_run": 464.725,
+          "mean_longest_no_contact_run": 416.2,
+          "mean_longest_wait_run": 3.625,
+          "mean_final_active_archives": 0.0,
+          "mean_admissions": 0.0,
+          "mean_evictions": 0.0,
+          "mean_collections_by_phase": [
+            47.025,
+            37.275,
+            32.625,
+            22.925,
+            27.3
+          ]
+        },
+        "slow": {
+          "phases_with_fewer_than_eight_contacts": 65,
+          "return_phases_with_fewer_than_eight_contacts": 36,
+          "mean_longest_no_collection_run": 472.65,
+          "mean_longest_no_contact_run": 415.75,
+          "mean_longest_wait_run": 3.6,
+          "mean_final_active_archives": 0.0,
+          "mean_admissions": 0.0,
+          "mean_evictions": 0.0,
+          "mean_collections_by_phase": [
+            47.025,
+            37.275,
+            32.325,
+            19.475,
+            19.45
+          ]
+        },
+        "no_reuse": {
+          "phases_with_fewer_than_eight_contacts": 59,
+          "return_phases_with_fewer_than_eight_contacts": 31,
+          "mean_longest_no_collection_run": 446.075,
+          "mean_longest_no_contact_run": 397.025,
+          "mean_longest_wait_run": 3.625,
+          "mean_final_active_archives": 2.325,
+          "mean_admissions": 2.5,
+          "mean_evictions": 0.175,
+          "mean_collections_by_phase": [
+            47.15,
+            40.35,
+            33.375,
+            24.425,
+            29.625
+          ]
+        },
+        "no_history": {
+          "phases_with_fewer_than_eight_contacts": 59,
+          "return_phases_with_fewer_than_eight_contacts": 33,
+          "mean_longest_no_collection_run": 464.85,
+          "mean_longest_no_contact_run": 390.85,
+          "mean_longest_wait_run": 3.45,
+          "mean_final_active_archives": 2.5,
+          "mean_admissions": 3.1,
+          "mean_evictions": 0.6,
+          "mean_collections_by_phase": [
+            47.025,
+            38.0,
+            32.6,
+            15.45,
+            16.9
+          ]
+        }
+      },
+      "bank_vs_fast_seed_outcomes": {
+        "more": 10,
+        "same": 14,
+        "fewer": 16
+      },
+      "collections_difference_by_seed": {
+        "61000": -15,
+        "61001": -44,
+        "61002": 0,
+        "61003": 134,
+        "61004": 0,
+        "61005": 71,
+        "61006": -4,
+        "61007": 0,
+        "61008": -143,
+        "61009": -67,
+        "61010": -162,
+        "61011": -52,
+        "61012": -144,
+        "61013": 0,
+        "61014": 9,
+        "61015": 0,
+        "61016": -127,
+        "61017": -48,
+        "61018": 0,
+        "61019": 170,
+        "61020": 0,
+        "61021": 0,
+        "61022": 5,
+        "61023": 0,
+        "61024": 0,
+        "61025": -80,
+        "61026": -61,
+        "61027": 0,
+        "61028": 160,
+        "61029": 0,
+        "61030": 145,
+        "61031": -6,
+        "61032": 68,
+        "61033": 5,
+        "61034": -2,
+        "61035": -39,
+        "61036": 0,
+        "61037": 6,
+        "61038": -42,
+        "61039": 0
+      }
+    },
+    "3": {
+      "modes": {
+        "bank": {
+          "phases_with_fewer_than_eight_contacts": 71,
+          "return_phases_with_fewer_than_eight_contacts": 36,
+          "mean_longest_no_collection_run": 505.1,
+          "mean_longest_no_contact_run": 414.65,
+          "mean_longest_wait_run": 3.6,
+          "mean_final_active_archives": 2.325,
+          "mean_admissions": 2.45,
+          "mean_evictions": 0.125,
+          "mean_collections_by_phase": [
+            47.025,
+            29.65,
+            30.775,
+            13.975,
+            22.85
+          ]
+        },
+        "fast": {
+          "phases_with_fewer_than_eight_contacts": 72,
+          "return_phases_with_fewer_than_eight_contacts": 41,
+          "mean_longest_no_collection_run": 502.15,
+          "mean_longest_no_contact_run": 413.825,
+          "mean_longest_wait_run": 3.475,
+          "mean_final_active_archives": 0.0,
+          "mean_admissions": 0.0,
+          "mean_evictions": 0.0,
+          "mean_collections_by_phase": [
+            47.025,
+            32.925,
+            25.825,
+            18.8,
+            21.725
+          ]
+        },
+        "slow": {
+          "phases_with_fewer_than_eight_contacts": 69,
+          "return_phases_with_fewer_than_eight_contacts": 40,
+          "mean_longest_no_collection_run": 492.775,
+          "mean_longest_no_contact_run": 393.65,
+          "mean_longest_wait_run": 3.35,
+          "mean_final_active_archives": 0.0,
+          "mean_admissions": 0.0,
+          "mean_evictions": 0.0,
+          "mean_collections_by_phase": [
+            47.025,
+            32.925,
+            25.575,
+            19.9,
+            27.95
+          ]
+        },
+        "no_reuse": {
+          "phases_with_fewer_than_eight_contacts": 71,
+          "return_phases_with_fewer_than_eight_contacts": 38,
+          "mean_longest_no_collection_run": 488.175,
+          "mean_longest_no_contact_run": 406.6,
+          "mean_longest_wait_run": 3.775,
+          "mean_final_active_archives": 2.375,
+          "mean_admissions": 2.75,
+          "mean_evictions": 0.375,
+          "mean_collections_by_phase": [
+            47.15,
+            28.425,
+            28.85,
+            19.075,
+            23.55
+          ]
+        },
+        "no_history": {
+          "phases_with_fewer_than_eight_contacts": 59,
+          "return_phases_with_fewer_than_eight_contacts": 30,
+          "mean_longest_no_collection_run": 463.9,
+          "mean_longest_no_contact_run": 372.3,
+          "mean_longest_wait_run": 3.5,
+          "mean_final_active_archives": 2.425,
+          "mean_admissions": 3.0,
+          "mean_evictions": 0.575,
+          "mean_collections_by_phase": [
+            47.025,
+            34.275,
+            30.225,
+            17.825,
+            26.75
+          ]
+        }
+      },
+      "bank_vs_fast_seed_outcomes": {
+        "more": 14,
+        "same": 10,
+        "fewer": 16
+      },
+      "collections_difference_by_seed": {
+        "61000": -48,
+        "61001": -1,
+        "61002": 0,
+        "61003": 3,
+        "61004": 0,
+        "61005": 84,
+        "61006": -6,
+        "61007": 0,
+        "61008": -6,
+        "61009": -43,
+        "61010": -94,
+        "61011": 39,
+        "61012": 3,
+        "61013": -77,
+        "61014": -19,
+        "61015": 0,
+        "61016": -75,
+        "61017": -45,
+        "61018": 0,
+        "61019": -2,
+        "61020": 0,
+        "61021": 0,
+        "61022": 15,
+        "61023": 0,
+        "61024": -41,
+        "61025": -107,
+        "61026": 137,
+        "61027": 0,
+        "61028": 115,
+        "61029": 8,
+        "61030": -71,
+        "61031": 3,
+        "61032": 67,
+        "61033": 76,
+        "61034": 50,
+        "61035": -22,
+        "61036": 0,
+        "61037": 35,
+        "61038": -65,
+        "61039": 6
+      }
+    }
+  }
+}

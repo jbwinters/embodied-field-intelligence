@@ -3,8 +3,9 @@
 Status: research design, three revision passes and an independent review
 complete. The first bounded contact pilot is now implemented; see
 [implementation, evidence, and limits](INTERACTION_LEARNING.md).
-Recurring-context retention and learned-ingredient composition remain
-proposals. See the
+[EFI-02](CONTEXT_MEMORY.md) now demonstrates a returning-context prediction
+gain, but its autonomous behavior gate remains open. Informative action and
+learned-ingredient composition remain proposals. See the
 [independent review and response](ONLINE_INTELLIGENCE_REVIEW.md).
 The implementation baseline is commit `bbb63de` on
 `feat/predictive-field-control`.

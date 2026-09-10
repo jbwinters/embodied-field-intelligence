@@ -1,0 +1,67 @@
+{
+  "source_steps": 80,
+  "source_contacts": 48,
+  "rows": [
+    {
+      "rotation": 0,
+      "intact": [
+        3.101295025641313e-20,
+        1.0
+      ],
+      "swapped": [
+        1.0,
+        3.1012950256413354e-20
+      ],
+      "erased": [
+        2.3208546562962512e-12,
+        2.3208546562962512e-12
+      ]
+    },
+    {
+      "rotation": 1,
+      "intact": [
+        3.101295025641313e-20,
+        1.0
+      ],
+      "swapped": [
+        1.0,
+        3.1012950256413354e-20
+      ],
+      "erased": [
+        2.3208546562962516e-12,
+        2.3208546562962516e-12
+      ]
+    },
+    {
+      "rotation": 2,
+      "intact": [
+        3.1012950256413354e-20,
+        1.0
+      ],
+      "swapped": [
+        1.0,
+        3.101295025641313e-20
+      ],
+      "erased": [
+        2.3208546562962512e-12,
+        2.3208546562962512e-12
+      ]
+    },
+    {
+      "rotation": 3,
+      "intact": [
+        3.1012950256413354e-20,
+        1.0
+      ],
+      "swapped": [
+        1.0,
+        3.101295025641313e-20
+      ],
+      "erased": [
+        2.3208546562962516e-12,
+        2.3208546562962516e-12
+      ]
+    }
+  ],
+  "scope": "Separate diagnostic: acquired contents, explicitly installed archive and fixed applicability. Same physical scene, fast counts, and mixture weights; change only archive contents. No diagnostic evidence enters the main experiment."
+}

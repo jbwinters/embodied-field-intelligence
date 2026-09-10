@@ -1,6 +1,6 @@
 # EFI research stories: from online experience to shared meaning
 
-**Status: EFI-01 demonstrated September 8, 2026; EFI-02–EFI-15 proposed.**
+**Status: EFI-01 demonstrated; EFI-02 implemented with a recall gain and an open behavioral gate; EFI-03–EFI-15 proposed. Updated September 8, 2026.**
 Prepared September 5 against the merged contact-learning baseline, commit
 `104c2eb`, and updated with [EFI-01 evidence](COMMAND_CONSEQUENCES.md).
 These are experiments to
@@ -62,14 +62,16 @@ The immediate batch is **EFI-01 through EFI-04**. EFI-01 now isolates
 command-specific knowledge under matched body feedback without adding new
 agent machinery. The original contact world's stronger passive control
 remains in its report; the new result concerns a different, declared task
-family. EFI-02 is the next substantial memory addition. The social
+family. EFI-02 now adds bounded memory: recall passes, but autonomous
+behavioral acceptance remains open. See its [complete result](CONTEXT_MEMORY.md). The social
 and language stories become progressively more provisional.
 
 ## Execute through Task Master
 
 The stories are loaded into the local Task Master **`master` tag as tasks
 1–15**, matching EFI-01 through EFI-15. Task 1 and its three subtasks are
-complete; tasks 2–15 are pending. Each has three
+complete. Task 2 is in progress: protocol and implementation subtasks are
+complete; behavioral acceptance remains open in 2.3. Tasks 3–15 are pending. Each has three
 ordered subtasks: establish the protocol and preservation baseline;
 implement the bounded mechanism and checks; evaluate and document the
 result. The main tasks include their experimental acceptance criteria and
@@ -119,6 +121,14 @@ body displacement does not pass this particular test.
 causal discovery and another agent's intentions remain outside this story.
 
 ## EFI-02: Recognize and reuse a returning context
+
+**Implemented; not yet demonstrated as a complete capability.** The first
+locked held-out study reduces return prediction errors by 64.0%, passes
+new-condition adaptation and resources, but misses the autonomous behavior
+noninferiority gate (−3.04 to +1.72 points; required lower limit ≥−2).
+[Report and next hypothesis](CONTEXT_MEMORY.md) ·
+[Protocol](EFI02_PROTOCOL.md) · [Full replay](assets/interactive/context_memory.html).
+The failed gate remains open; dependent capability claims stay provisional.
 
 **Story.** After learning two different response conditions, the agent can
 recover useful old knowledge when an earlier condition returns while

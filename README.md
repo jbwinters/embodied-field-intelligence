@@ -65,6 +65,22 @@ learning without adding agent machinery.
 [Open the original-viewer replay](docs/assets/interactive/command_contact.html).
 Reproduce with `python cli.py command-contact`.
 
+### Returning-context memory
+
+**EFI-02 is implemented, with a mixed result.** A bounded bank of learned
+response models makes **64.0% fewer prediction errors when a condition
+returns**, across 40 held-out seeds, while meeting the new-condition
+adaptation limit. It uses 22.73 MiB peak allocation and 4.33 ms p95 on the
+measured CPU. The autonomous behavior guardrail does **not** pass, so the
+capability remains open; earlier controllers and the full EFI-01 archive
+are preserved.
+
+![EFI-02 recall improves while the autonomous behavior gate remains open](docs/assets/images/context_memory.png)
+
+[Read the results and the failed gate](docs/CONTEXT_MEMORY.md) ·
+[Open the complete original-viewer lifetime](docs/assets/interactive/context_memory.html).
+Reproduce with `python cli.py context-memory`.
+
 ## Overview
 
 The [ordered research stories](docs/RESEARCH_STORIES.md) lay out the next
