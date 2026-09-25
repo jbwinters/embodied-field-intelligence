@@ -123,7 +123,7 @@ producing up to 1.8/step) had to be re-scaled as costs (`q_trail = 0.08`):
 in cost units, 1.8/step prices a corridor above the total available reward
 and traps the agent behind its own trail.
 
-## 6. Fixed-point tracking (the real-time story; see Task 4)
+## 6. Fixed-point tracking (the real-time story; see [TRACKING.md](TRACKING.md))
 
 `value_sweeps` is a contraction on the passable region (positive `q` ⇒
 per-sweep gain < 1 in z-space). Beliefs move slowly (≤ one observation

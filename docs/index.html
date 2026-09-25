@@ -75,7 +75,7 @@
     <section id="approach" class="section alt-bg">
         <div class="container">
             <h2>From Chemotaxis to Learned Prediction</h2>
-            <p>The original field mechanisms below are the starting point. See the <a href="https://github.com/jbwinters/embodied-field-intelligence/blob/main/docs/ONLINE_INTELLIGENCE_DESIGN.md">architecture design</a> for the current direction and which milestones remain proposals.</p>
+            <p>The original field mechanisms below are the starting point. Later experiments add learned motion and contact predictions; see the demonstrations for their measured results and limits.</p>
             
             <div class="approach-grid">
                 <div class="approach-card">
@@ -230,17 +230,17 @@
             
             <div class="demo-grid">
                 <div class="demo-card">
-                    <h3>EFI-02: Returning-Context Memory</h3>
+                    <h3>Returning-Context Memory</h3>
                     <a href="assets/interactive/context_memory.html">
-                        <img src="assets/images/context_memory.png" alt="EFI-02 recall gain and failed autonomous behavior guardrail">
+                        <img src="assets/images/context_memory.png" alt="Returning-context recall gain and failed autonomous behavior guardrail">
                     </a>
                     <p>A bounded memory bank reduces returning-condition prediction errors by 64.0%. New-condition adaptation and resource limits pass, but autonomous behavioral acceptance remains open. The full lifetime includes failures.</p>
                     <p><a href="assets/interactive/context_memory.html">Watch the full lifetime</a> · <a href="https://github.com/jbwinters/embodied-field-intelligence/blob/main/docs/CONTEXT_MEMORY.md">Results and limits</a></p>
                 </div>
                 <div class="demo-card">
-                    <h3>EFI-01: What a Command Changes</h3>
+                    <h3>What a Command Changes</h3>
                     <a href="assets/interactive/command_contact.html">
-                        <img src="assets/images/command_contact.png" alt="EFI-01 success, matched-feedback prediction, and complete learning curves">
+                        <img src="assets/images/command_contact.png" alt="Command-specific success, matched-feedback prediction, and complete learning curves">
                     </a>
                     <p>Two commands, the same body movement, different object effects. Acquired command-specific evidence achieves 87.81% success versus 17.89% with commands pooled and 48.28% with empty evidence. The existing field learner supplies the mechanism.</p>
                     <p><a href="assets/interactive/command_contact.html">Watch the command and the block</a> · <a href="https://github.com/jbwinters/embodied-field-intelligence/blob/main/docs/COMMAND_CONSEQUENCES.md">Protocol, controls, and limits</a></p>

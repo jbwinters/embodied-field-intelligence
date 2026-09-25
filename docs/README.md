@@ -1,19 +1,19 @@
 # EFI documentation and demos
 
 EFI explores embodied learning through local fields on a CPU. Start with a
-recording, then use the reports to distinguish measured results from the
-next architectural proposals.
+recording, then read the reports for the measured results, controls, and
+limits of each experiment.
 
 ## Watch a demo
 
 | Recording | What to look for | Open the file |
 |---|---|---|
-| EFI-02 returning-context memory · complete lifetime | A bounded model bank learns across five response segments. Recall improves, but the autonomous behavior gate remains open. | [Context replay](assets/interactive/context_memory.html) |
-| EFI-01 command consequences · 56 frames | Two commands hold the body still but move the block differently. Six chapter groups compare acquired and command-blind evidence. | [Command replay](assets/interactive/command_contact.html) |
 | Continuous contact learning · 180 moves, about 90 seconds | One agent starts with empty evidence, encounters obstacles, and learns through two changes in object response. Jump to move 120 and step forward. | [Long replay](assets/interactive/interaction_long.html) |
 | Controlled contact trials · 28 frames | Selected source contacts, then acquired-versus-empty target attempts. These are separate scenes, with omitted source interventions labeled. | [Short replay](assets/interactive/interaction.html) |
+| Command consequences · 56 frames | Two commands hold the body still but move the block differently. Six chapter groups compare acquired and command-blind evidence. | [Command replay](assets/interactive/command_contact.html) |
+| Returning-context memory · complete lifetime | A bounded model bank learns across five response segments. Recall improves, but the autonomous behavior gate remains open. | [Context replay](assets/interactive/context_memory.html) |
 
-These are the original EFI HTML viewer, with recorded fields, action
+All four use the EFI HTML episode viewer, with recorded fields, action
 probabilities, a synchronized probe, and playback controls. Narrated
 recordings include a legend, sensing boundaries, chapter buttons, and action
 feedback. None of the replays needs Python, a GPU, a server, or an internet
@@ -24,34 +24,31 @@ the file link, use **Download raw file**, then open the downloaded `.html`.
 GitHub displays HTML source rather than running the player. Download linked
 players into the same folder if you want their links to each other to work.
 
-To browse the entire research site locally, run this from the repository root:
+To browse the whole research site locally, run this from the repository root:
 
 ```bash
 python -m http.server 8000 --bind 127.0.0.1 --directory docs
 ```
 
-Open [the local site](http://localhost:8000/) or
-[the longer player](http://localhost:8000/assets/interactive/interaction_long.html).
-The [public site](https://jbwinters.github.io/embodied-field-intelligence/)
-requires a GitHub Pages deployment; an unmerged branch is not published there.
-See [site deployment](GITHUB_PAGES.md).
+Then open [localhost:8000](http://localhost:8000/). [GITHUB_PAGES.md](GITHUB_PAGES.md)
+describes how to publish the same site with GitHub Pages.
 
 ## Run the agents yourself
 
 After [installation](../README.md#installation), run commands from the repository root:
 
 ```bash
+# Original foraging controller; open runs/interactive_latest.html
+python cli.py interactive
+
 # Longer continuous contact example; open runs/contact-demo/episode.html
 python cli.py contact-demo --seed 6 --max-steps 180 --out runs/contact-demo
 
-# Quick EFI-02 run; open runs/context-smoke/episode.html
-python cli.py context-memory --seeds 1 --seed 71020 --out runs/context-smoke
-
-# Quick EFI-01 run; open runs/command-smoke/episode.html
+# Quick command-learning run; open runs/command-smoke/episode.html
 python cli.py command-contact --seeds 1 --episodes 2 --seed 31010 --out runs/command-smoke
 
-# Original foraging controller; open runs/interactive_latest.html
-python cli.py interactive
+# Quick returning-context run; open runs/context-smoke/episode.html
+python cli.py context-memory --seeds 1 --seed 71020 --out runs/context-smoke
 
 # Quick predictive crossing run; open runs/crossing-smoke/episode.html
 python cli.py crossing --seeds 2 --episodes 4 --out runs/crossing-smoke
@@ -60,36 +57,46 @@ python cli.py crossing --seeds 2 --episodes 4 --out runs/crossing-smoke
 python cli.py transfer --seeds 2 --episodes 2 --acquisition 4 --out runs/transfer-smoke
 ```
 
-The smoke runs exercise the implementation. The reports below provide the
-full evaluation commands and archived results. The new controllers remain
-opt-in; they have not been unified into one agent with all earlier capabilities.
+The smoke runs exercise the implementation; they are not held-out estimates.
+Each report gives the full evaluation commands and links its archived results.
+The learning controllers are opt-in and separate from one another; they have
+not been unified into one agent with all earlier capabilities.
 
 ## Read the research
 
-| Start with | Covers |
-|---|---|
-| [Ordered research stories](RESEARCH_STORIES.md) | Active sequence from action consequences and retention through composition, social learning, shared signaling, and grounded language; experiments and acceptance criteria for each |
-| [EFI-02: returning-context memory](CONTEXT_MEMORY.md) | Recall gain, failed behavioral gate, all controls, capacity limits, preserved results, and a full original-viewer lifetime |
-| [EFI-01: command consequences](COMMAND_CONSEQUENCES.md) | Matched-body-feedback evidence for command-specific learning, all seven controls, source costs, preserved evaluations, and original-viewer replay |
-| [Contact learning](INTERACTION_LEARNING.md) | Current implementation, a viewer walkthrough, held-out controls, CPU/memory costs, and limitations |
-| [Predictive crossing](PREDICTIVE_CONTROL.md) | Learning to anticipate moving hazards and adapt after their motion changes |
-| [Motion transfer](PREDICTIVE_TRANSFER.md) | Reusing acquired motion across object roles and room geometry |
-| [Online intelligence design](ONLINE_INTELLIGENCE_DESIGN.md) | Architecture and staged gates; contact is implemented; EFI-02 has a measured recall gain and an open behavioral gate; composition remains proposed |
-| [Independent design review](ONLINE_INTELLIGENCE_REVIEW.md) | Critiques and the design's responses |
-| [Foraging theory](THEORY.md) | The current foraging value recursion and its local implementation |
-| [Earlier experiment report](EXPERIMENT_REPORT.md) | Historical experiments; these are separate from the newer pilots |
+Reports are listed roughly in the order the work was done.
 
-Each capability report links its raw trials, summaries, and validation
-records under `assets/data/`. Recorded demonstrations illustrate behavior;
-statistical claims come from the complete evaluations, including failures.
+| Report | Covers |
+|---|---|
+| [Mathematical formalization](MATHEMATICAL_FORMALIZATION.md) | Formal definitions for the original chemotaxis-style field controller |
+| [Earlier experiment report](EXPERIMENT_REPORT.md) | Historical parameter studies of the chemotaxis controller |
+| [Foraging theory](THEORY.md) | The current foraging controller: a linearly-solvable-MDP value recursion computed with local field operations |
+| [Fixed-point tracking](TRACKING.md) | Why a few value sweeps per tick keep up with slowly changing beliefs |
+| [Non-stationary worlds](EXPERIMENTS_NONSTAT.md) | Pre-registered hypotheses and results for drifting, regrowing, and reward-swapping worlds |
+| [Predictive crossing](PREDICTIVE_CONTROL.md) | Learning to anticipate moving hazards and adapting after their motion changes |
+| [Motion transfer](PREDICTIVE_TRANSFER.md) | Reusing learned motion across object roles and room geometry |
+| [Contact learning](INTERACTION_LEARNING.md) | Learning what contact does to an object, with held-out controls, CPU/memory costs, and a viewer walkthrough |
+| [Command consequences](COMMAND_CONSEQUENCES.md) | Learning what each command changes when commands produce identical body motion |
+| [Returning-context memory](CONTEXT_MEMORY.md) | A bounded memory of response models: a recall gain, a failed behavioral gate, and capacity limits |
+
+The last two experiments each followed a protocol written before any held-out
+runs: [command consequences](EFI01_PROTOCOL.md) and
+[returning-context memory](EFI02_PROTOCOL.md). These files are kept exactly
+as they were locked, because the validation scripts check their hashes, so
+they still use the project's internal experiment labels.
+
+Each report links its raw trials, summaries, and validation records under
+`assets/data/`. Recorded demonstrations illustrate behavior; statistical
+claims come from the complete evaluations, including failures.
 
 ## Maintain the site
 
 `index.html` is the research landing page. `assets/interactive/` contains
 standalone players; `assets/images/` holds figures and GIFs; `assets/data/`
 holds archived measurements. Styles and chart code live in `assets/css/`
-and `assets/js/`.
+and `assets/js/`. [GIF_EXPORT.md](GIF_EXPORT.md) explains how to export
+episodes as animated GIFs.
 
-Use the reproduction commands in the relevant report when updating an
-experiment. Keep its methods, data, figures, and validation record together.
+When updating an experiment, use the reproduction commands in its report
+and keep its methods, data, figures, and validation record together.
 The landing page labels its older chemotaxis charts as historical results.

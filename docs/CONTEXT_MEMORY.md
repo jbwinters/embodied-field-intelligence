@@ -1,11 +1,11 @@
-# EFI-02: Recognizing a returning response
+# Recognizing a returning response
 
-**Experiment complete; EFI-02's behavioral acceptance gate remains open.**
+**Experiment complete; its behavioral acceptance gate remains open.**
 The bounded bank reduces wrong predictions after a response returns by
 **64.0% relative to the existing fast table**, across 40 held-out seeds.
 It passes the declared new-condition adaptation, mechanism, capacity-coverage,
 and CPU/memory checks. It does **not** establish autonomous behavioral
-noninferiority, so this is not yet a demonstrated EFI-02 capability.
+noninferiority, so returning-context memory is not yet a demonstrated capability.
 Existing controllers and their executable defaults remain preserved.
 
 ## Held-out results
@@ -56,8 +56,8 @@ the failed primary immediate-feedback behavior gate.
 
 ## What changes in the agent
 
-EFI-01 learns what a command does in a local geometry. Its single table
-continually overwrites older evidence. EFI-02 keeps a fast table and up to
+The [command-learning](COMMAND_CONSEQUENCES.md) agent learns what a command does in a local geometry. Its single table
+continually overwrites older evidence. The memory bank keeps a fast table and up to
 three acquired alternatives. Actual body/object feedback changes their
 applicability weights. When a familiar response returns, an older model can
 become useful again before the fast table has relearned every command.
@@ -222,10 +222,10 @@ under concurrent evaluation and are not used for these resource claims.
 The full suite passes **285 tests with four expected failures**, versus
 276 plus four before this work. Supplemental checks extend recognition to
 an untried command row and run the locality check through actual learning.
-The final nine EFI-02 tests also pass. Existing CLI demo and Gym registration
+The final nine memory-bank tests also pass. Existing CLI demo and Gym registration
 smoke checks pass.
 
-The full EFI-01 archive reproduces **8,960 target trials, 6,400 source
+The full command-learning archive reproduces **8,960 target trials, 6,400 source
 transitions, 640 probes, and 80 learned models** exactly, excluding timing
 fields. All preexisting agent, core, world, evaluation, and test sources
 retain their baseline hashes; the existing CLI only gains opt-in commands.
@@ -243,15 +243,13 @@ opportunities; every common-stream segment meets that coverage. The bank
 loses ground mainly in the last two segments. These are
 different trajectories; the analysis does not identify a causal mechanism.
 
-A concrete next hypothesis is that globally weighted archives can dilute
+One open hypothesis is that globally weighted archives can dilute
 useful fast predictions in command/context rows with little archived
 support. That is visible in the current mixture definition, but its role
-in the behavioral losses is **unproven**. The next EFI-02 effort should
-replay the divergent decisions, test bounded support weighting on development
-seeds, and preregister fresh held-out seeds before another acceptance run.
-Keep this failed result and the same behavioral margin. More memory alone
-is not an established remedy, and EFI-03 remains dependent on an unfinished
-capability.
+in the behavioral losses is **unproven**. Testing it would mean
+replaying the divergent decisions, trying bounded support weighting on development
+seeds, and preregistering fresh held-out seeds before another acceptance run
+with the same behavioral margin. More memory alone is not an established remedy.
 
 The original-viewer recording contains all **972 frames** of seed
 61000's first bank lifetime, including its 206 collections and failures.

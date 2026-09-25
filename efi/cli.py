@@ -656,7 +656,7 @@ def build_parser():
     profile_parser.add_argument("--out", default="runs/interaction/profile.json")
 
     command_parser = subparsers.add_parser(
-        "command-contact", help="EFI-01: learn command effects with matched body feedback")
+        "command-contact", help="Learn command effects with matched body feedback")
     command_parser.add_argument("--seeds", type=int, default=40)
     command_parser.add_argument("--episodes", type=int, default=8)
     command_parser.add_argument("--acquisition", type=int, default=2)
@@ -664,12 +664,12 @@ def build_parser():
     command_parser.add_argument("--out", default="runs/command-contact")
 
     command_profile_parser = subparsers.add_parser(
-        "command-profile", help="EFI-01 CPU latency and peak memory")
+        "command-profile", help="Command-learning CPU latency and peak memory")
     command_profile_parser.add_argument("--episodes", type=int, default=400)
     command_profile_parser.add_argument("--out", default="runs/command-contact/profile.json")
 
     context_parser = subparsers.add_parser(
-        "context-memory", help="EFI-02: recognize and reuse returning response conditions")
+        "context-memory", help="Recognize and reuse returning response conditions")
     context_parser.add_argument("--seeds", type=int, default=40)
     context_parser.add_argument("--seed", type=int, default=61000)
     context_parser.add_argument(
@@ -680,12 +680,12 @@ def build_parser():
     context_parser.add_argument("--immediate-only", action="store_true")
 
     capacity_parser = subparsers.add_parser(
-        "context-capacity", help="EFI-02 bounded retention under increasing response load")
+        "context-capacity", help="Context-memory retention under increasing response load")
     capacity_parser.add_argument("--seeds", type=int, default=10)
     capacity_parser.add_argument("--seed", type=int, default=62000)
     capacity_parser.add_argument("--out", default="runs/context-memory")
     context_profile_parser = subparsers.add_parser(
-        "context-profile", help="EFI-02 CPU latency and saturated-cache memory")
+        "context-profile", help="Context-memory CPU latency and saturated-cache memory")
     context_profile_parser.add_argument("--lifetimes", type=int, default=3)
     context_profile_parser.add_argument("--out", default="runs/context-memory/profile.json")
 
@@ -1088,7 +1088,7 @@ def main():
         for mode, row in result["summary"]["overall"].items():
             print(f"[{mode}] success={row['success']:.1%} return={row['return']:+.3f}")
         print(f"Research gates: {result['summary']['research_gates']}")
-        print(f"EFI-01 results and original viewer saved to {args.out}")
+        print(f"Command-learning results and original viewer saved to {args.out}")
     elif args.mode == "command-profile":
         from efi.evaluation.command_profile import profile_command
         result = profile_command(args.episodes, args.out)
@@ -1101,11 +1101,11 @@ def main():
                                     delays=(0,) if args.immediate_only else (0, 3),
                                     behavior=not args.common_only, progress=True, workers=args.workers)
         print(f"Research gates: {result['summary']['research_gates']}")
-        print(f"EFI-02 results saved to {args.out}")
+        print(f"Context-memory results saved to {args.out}")
     elif args.mode == "context-capacity":
         from efi.evaluation.context_capacity import capacity_experiment
         capacity_experiment(args.seeds, args.seed, args.out, progress=True)
-        print(f"EFI-02 capacity results saved to {args.out}")
+        print(f"Context-memory capacity results saved to {args.out}")
     elif args.mode == "context-profile":
         from efi.evaluation.context_profile import profile_context
         result = profile_context(args.lifetimes, args.out)

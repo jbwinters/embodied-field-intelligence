@@ -1,11 +1,12 @@
-# EFI-01: learning what a command changes
+# Learning what a command changes
 
-EFI-01 tests whether the existing field learner acquires **command-specific
+This experiment tests whether the existing field learner acquires **command-specific
 object consequences**, even when the commands produce identical body motion.
 The experiment adds a contact world, common-stream controls, and an
 auditable evaluation. It introduces no new agent, learned representation,
 or controller rule. This is a stronger demonstration of the current
-substrate's capability, preparing the returning-context work in EFI-02.
+substrate's capability, and the basis for the
+[returning-context memory](CONTEXT_MEMORY.md) experiment.
 
 Across **40 held-out seeds and 8,960 target trials**, acquired command-specific
 evidence achieved **87.81%** goal collection, versus **17.89%** with commands
@@ -47,7 +48,7 @@ conditioned results happen to match because the physical scenes, learned
 evidence strength, and subsequent motor sampling are symmetric. They are
 not additional independent samples beyond the 40 seed clusters.
 
-![EFI-01 comparisons and learning curves](assets/images/command_contact.png)
+![Command-learning comparisons and learning curves](assets/images/command_contact.png)
 
 ## Watch a command cause a reaction
 
@@ -219,8 +220,8 @@ each local context. It outperforms command pooling overall, showing that
 aliased acquired evidence can be worse than starting empty. Swapped commands
 fail all 1,280 trials despite 2,560 actual evidence updates: incorrect prior
 bindings continue attracting blocked commands during this short budget.
-This is a concrete motivation for testing informative action in EFI-03;
-it does not show that existing online updating always recovers from wrong
+This motivates choosing actions for the information they reveal; it
+does not show that existing online updating always recovers from wrong
 knowledge. No control collides; this world contains no hazards, so that
 zero is not evidence for safety around hazards.
 
@@ -291,7 +292,7 @@ before/after hashes are retained with the validation archive.
 The new experiment is opt-in. The older controllers, world laws, evaluations,
 and viewer remain executable. Matching their results establishes preservation
 of those paths; it does not establish that the contact learner has absorbed
-their navigation or motion-transfer competence. Integration remains EFI-05.
+their navigation or motion-transfer competence. The controllers remain separate.
 
 ## Reproduce and inspect
 
@@ -327,12 +328,12 @@ Archived evidence: [all trials and models](assets/data/command_contact/results.j
 [recording](assets/data/command_contact/episode.json), and
 [print-quality figure](assets/images/command_contact.pdf).
 
-## What this earns next
+## What this shows
 
-EFI-01 supplies evidence that command-specific physical experience changes
+This experiment supplies evidence that command-specific physical experience changes
 useful behavior independently of body displacement. It strengthens the
 case for building on the existing substrate without increasing its cognitive
-machinery merely to advance the milestone number.
+machinery.
 
 It does not establish general causal discovery, spontaneous motor invention,
 long-horizon planning, a learned representation, recurring-context retention,
@@ -342,7 +343,6 @@ are designed. Forty seeds vary exposure order, orientation, decoration, and
 policy sampling, not forty unrelated physical laws. Prediction intervals
 can collapse because all models finish with the same balanced evidence.
 
-**EFI-02 is the next architectural effort:** preserve and recover useful
-knowledge when a previous response context returns, while continuing to
-adapt. EFI-03 will address informative actions. The current experiment's
-failure curves help distinguish those needs from simply expanding a table.
+The follow-up [returning-context memory](CONTEXT_MEMORY.md) experiment tests
+whether useful knowledge can be preserved and recovered when a previous
+response context returns, while the agent continues to adapt.

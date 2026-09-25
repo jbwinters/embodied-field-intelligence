@@ -6,11 +6,9 @@ experience to choose an approach in a rearranged local scene. The new
 commands, learns only from actual feedback, and evaluates two physical
 steps through bounded local fields and co-located hypothesis channels.
 
-This implements the first contact pilot in the
-[online intelligence design](ONLINE_INTELLIGENCE_DESIGN.md). It is an opt-in
-research capability. Recurring-context retention, composition of two
-independently learned skills, and integration into the earlier navigation
-controllers remain open milestones.
+This is the first contact pilot, and an opt-in research capability. It does
+not retain recurring response contexts, compose two independently learned
+skills, or integrate with the earlier navigation controllers.
 
 Across 40 held-out seeds, acquired evidence plus continued online learning
 collects goals in **93.65% / 92.40%** of the two contact arrangements, versus
@@ -233,7 +231,7 @@ influence a nearby model query after the radius-two binding, two cache
 passes, and radius-one read: a conservative composed spatial cone is five.
 This is not a single radius-one CA update for the entire decision.
 
-Two deliberate pilot choices differ from the larger design: the cache
+Two deliberate pilot choices favor simplicity over efficiency: the cache
 payload is the entire small finite table rather than four sparse records,
 and joint inference uses a gathered body-local fiber rather than populating
 rollout channels at every physical-space cell. Both costs are explicit.
@@ -390,24 +388,23 @@ reward accounting, bounded memory/work, rotation reuse, and actual viewer
 policy/field payloads.
 
 Preserving earlier code paths is distinct from preserving every earlier
-capability in this new controller. The new contact agent has not passed the
-design's integrated-successor gate on foraging, crossing, or interception.
+capability in this new controller. The new contact agent has not been shown
+to match the earlier controllers on foraging, crossing, or interception.
 It remains opt-in and does not replace their defaults.
 
-## What this opens, and what it does not settle
+## What this shows, and what it does not settle
 
 We now have an executable route from actual action feedback to bounded
 evidence, local prediction, and changed action preference. That is a concrete
-foundation for the proposed cognitive space. The present effect vocabulary,
+foundation for further experiments. The present effect vocabulary,
 geometry features, motor support, and goal interpretation are supplied.
 The system has not learned those representations, inferred another agent's
 intentions, retained competing response contexts, or composed two separately
 learned relations.
 
-The next architectural milestone should add recurring, observably cued
-response conditions and test retention against this single fast table.
-Before making a composition claim, independently learn a motor relation and
-a contact relation, then require both on unseen combinations. A stronger
-action-conditioning test should allow different commands to cause distinct
-object reactions while holding observed geometry and body displacement
-constant. The current passive ablation makes that requirement concrete.
+Two follow-up experiments build on this pilot.
+[Learning what a command changes](COMMAND_CONSEQUENCES.md) holds observed
+geometry and body displacement constant while different commands cause
+distinct object reactions. [Recognizing a returning response](CONTEXT_MEMORY.md)
+adds recurring response conditions and tests retention against this single
+fast table.
